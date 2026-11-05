@@ -339,10 +339,17 @@ async function revealAuction() {
   busy(btn, true, "Decrypting…");
   try {
     const id = BigInt(state.selected);
-    const [winnerHandle, priceHandle] = await read("getResultHandles", [id]);
+    const ZERO = "0x" + "0".repeat(64);
     const fhe = await getFhe();
     let res = null;
-    for (let i = 0; i < 8 && !res; i++) {
+    for (let i = 0; i < 12 && !res; i++) {
+      // re-read every attempt: right after close() an RPC node may not have the new block yet
+      const [winnerHandle, priceHandle] = await read("getResultHandles", [id]);
+      if (winnerHandle === ZERO || priceHandle === ZERO) {
+        log("Waiting for the close() block to reach the RPC node…", "warn");
+        await new Promise((r) => setTimeout(r, 4000));
+        continue;
+      }
       try { res = await fhe.publicDecrypt([winnerHandle, priceHandle]); }
       catch (e) { log(`Relayer not ready yet (${errMsg(e).slice(0, 80)}). Retrying…`, "warn"); await new Promise((r) => setTimeout(r, 5000)); }
     }
