@@ -4,7 +4,7 @@ import { setupWalletSelector } from "@near-wallet-selector/core";
 import { setupMeteorWallet } from "@near-wallet-selector/meteor-wallet";
 import { actionCreators, createTransaction, encodeTransaction, SignedTransaction, Signature } from "@near-js/transactions";
 import { baseDecode, getTransactionLastResult } from "@near-js/utils";
-import { KeyPair } from "@near-js/crypto";
+import { KeyPair, PublicKey } from "@near-js/crypto";
 import { JsonRpcProvider, FailoverRpcProvider } from "@near-js/providers";
 import vaultWasmUrl from "./swarm_vault.wasm?url";
 import { contracts, chainAdapters, utils } from "chainsig.js";
@@ -140,6 +140,7 @@ async function onNear(id) {
   }
   log("Agents derived from the vault: " + state.agents.map((a) => `${a.name} ${short(a.address)}`).join(", "), "ok");
   await refreshVault();
+  await createBotAccount();
   await refreshIntentsBalance();
   await refreshBalances();
   updateUi();
@@ -283,6 +284,22 @@ async function settleAuction() {
     await refreshIntentsBalance();
   } catch (e) { log("Settlement failed: " + errMsg(e), "err"); $("settleResult").innerHTML = `<span class="err">${errMsg(e)}</span>`; }
   busy(btn, false); updateUi();
+}
+
+// Helper for the always-on market bot (market/bot.mjs): the owner creates market.<owner> with the
+// bot's public key as its full-access key. Opened with ?botkey=ed25519:... (testnet only).
+async function createBotAccount() {
+  const key = new URLSearchParams(location.search).get("botkey");
+  if (!key || NET !== "testnet") return;
+  const id = `market.${state.accountId}`;
+  if (!confirm(`Create ${id} with 10 testnet NEAR for the market bot, with full-access key ${key}?`)) return;
+  try {
+    await state.wallet.signAndSendTransaction({ receiverId: id, actions: [
+      actionCreators.createAccount(), actionCreators.transfer(10n * NEAR),
+      actionCreators.addKey(PublicKey.fromString(key), actionCreators.fullAccessKey()),
+    ] });
+    log(`${id} created for the market bot.`, "ok");
+  } catch (e) { log("Bot account creation failed: " + errMsg(e), "err"); }
 }
 
 async function createVault() {

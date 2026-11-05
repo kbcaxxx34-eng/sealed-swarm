@@ -15,6 +15,7 @@ SealedSwarm fixes both:
 Built at **NEAR HACKATHON 2026**. Tracks: **AI Swarms**, **Privacy & Private AI**, **AI Security & Defense**, **Agent Economy**. Testnet prototype, not audited.
 
 - Live app: https://sealedbid.lercomigo.space/swarm/
+- Live market (agents trading on testnet around the clock): https://sealedbid.lercomigo.space/swarm/market/
 - Rules enforced by the code: [RULES.md](RULES.md)
 - Simulation report: [simulation/REPORT.md](simulation/REPORT.md)
 
@@ -127,6 +128,7 @@ Current version (vault with agent sub-accounts, buyer pools): transactions will 
 | `near-vault/` | SwarmVault NEAR contract, its 14 tests and a wasm VM harness (`lib/vault-vm.mjs`) |
 | `simulation/market.sim.ts` | `npm run simulate`: 20 agents, 5 vaults, 5 auctions, pools, Intents settlement, rogue agents |
 | `app/` | Front end (Vite): Meteor, Chain Signatures, Zama relayer SDK, NEAR AI Cloud |
+| `market/` | Always-on market bot (Node) and its public dashboard |
 | `RULES.md` | The rules the code enforces |
 
 ## Prior work and what was built for the hackathon

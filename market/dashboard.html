@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>SealedSwarm live market</title>
+  <meta name="description" content="A GPU market run by AI agents on NEAR testnet and Ethereum Sepolia: sealed FHE bids, encrypted buyer pools, and a vault that blocks a hijacked agent every round." />
+  <style>
+    :root{--paper:#EEF1F5;--sheet:#fff;--ink:#18233D;--slate:#5B6680;--rule:#D5DBE6;--tint:#C7CFDF;--post:#2A3FD1;--ok:#0E7A55;--err:#B4232C;
+      --mono:ui-monospace,"SF Mono",Menlo,Consolas,monospace;
+      --seal:repeating-linear-gradient(45deg,transparent 0 5px,rgba(42,63,209,.07) 5px 6px),repeating-linear-gradient(-45deg,transparent 0 5px,rgba(24,35,61,.06) 5px 6px),#E3E8F1}
+    *{box-sizing:border-box}
+    body{margin:0;background:var(--paper);color:var(--ink);font:15px/1.55 system-ui,-apple-system,"Segoe UI",sans-serif}
+    a{color:var(--post)}
+    main{max-width:1100px;margin:0 auto;padding:28px 20px 60px}
+    .brand{font-weight:700;color:var(--slate);margin:0 0 10px}
+    h1{margin:0;font-size:clamp(28px,4vw,44px);line-height:1.05;letter-spacing:-.02em;max-width:22ch}
+    .lede{color:var(--slate);max-width:70ch;margin:12px 0 0}
+    .totals{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin:24px 0}
+    @media(max-width:700px){.totals{grid-template-columns:repeat(2,1fr)}}
+    .totals div{background:var(--sheet);border:1px solid var(--rule);border-radius:6px;padding:14px 16px}
+    .totals b{display:block;font-size:30px;font-weight:700;font-variant-numeric:tabular-nums}
+    .totals span{color:var(--slate);font-size:13.5px}
+    .round{background:var(--sheet);border:1px solid var(--rule);border-radius:6px;padding:18px 20px;margin-bottom:12px}
+    .round h2{margin:0;font-size:18px}
+    .round .meta{color:var(--slate);font-size:13.5px;margin:2px 0 12px}
+    .outcome{font-size:16px;margin:0 0 10px}
+    .agents{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:8px;margin:10px 0}
+    .agents div{background:var(--seal);border:1px solid var(--tint);border-radius:4px;padding:8px 10px;font-size:13.5px}
+    .blocked{border-left:3px solid var(--err);padding:6px 10px;background:#FBF1F2;font-size:13.5px;margin-top:8px}
+    .txs{font-size:13px;color:var(--slate);margin-top:8px}
+    .txs a{margin-right:10px}
+    .ok{color:var(--ok)} .err{color:var(--err)}
+    code{font:12.5px var(--mono)}
+    .empty{color:var(--slate)}
+  </style>
+</head>
+<body>
+<main>
+  <p class="brand"><a href="../">SealedSwarm</a> · live market</p>
+  <h1>A GPU market run by AI agents, right now</h1>
+  <p class="lede">Every few hours a seller opens an auction for GPU time. Four agents from a NEAR vault value the lot, encrypt their bids with Zama FHE and get them signed through the vault and NEAR Chain Signatures. Agents that can't reach the reserve pool their budgets. Each round one agent is hijacked on purpose and tries to pay an attacker; the vault refuses on-chain. Only the winner and the price are ever revealed. NEAR testnet + Ethereum Sepolia.</p>
+
+  <div class="totals">
+    <div><b id="tRounds">–</b><span>auctions settled</span></div>
+    <div><b id="tBids">–</b><span>sealed bids and pools</span></div>
+    <div><b id="tPools">–</b><span>encrypted buyer pools</span></div>
+    <div><b id="tBlocked">–</b><span>hijack attempts blocked</span></div>
+  </div>
+  <p class="empty" id="updated"></p>
+  <div id="rounds"><p class="empty">Loading the market…</p></div>
+</main>
+<script>
+const esc = (t) => String(t ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+const near = (h) => h ? `<a href="https://testnet.nearblocks.io/txns/${esc(h)}" target="_blank" rel="noopener">NEAR tx</a>` : "";
+const eth = (h) => h ? `<a href="https://sepolia.etherscan.io/tx/${esc(h)}" target="_blank" rel="noopener">Sepolia tx</a>` : "";
+async function load() {
+  try {
+    const m = await (await fetch("market.json", { cache: "no-store" })).json();
+    for (const [k, id] of [["rounds", "tRounds"], ["bids", "tBids"], ["pools", "tPools"], ["blocked", "tBlocked"]]) document.getElementById(id).textContent = m.stats[k];
+    document.getElementById("updated").innerHTML = `Last round finished ${new Date(m.updated).toLocaleString()}. Vault <code>${esc(m.vault)}</code>, contract <a href="https://sepolia.etherscan.io/address/${esc(m.contract)}" target="_blank" rel="noopener"><code>${esc(m.contract)}</code></a>.`;
+    document.getElementById("rounds").innerHTML = m.rounds.map((r) => `
+      <article class="round">
+        <h2>Auction #${r.auction}: ${esc(r.lot)}</h2>
+        <div class="meta">Reserve ${r.reserve} · ${r.bidCount ?? "?"} sealed entries · ${new Date(r.started).toLocaleString()}</div>
+        <p class="outcome">${r.winner === "no sale" ? "No sale: every bid was below the reserve." : `<b>${esc(r.winner)}</b> won and pays <b>${r.price}</b> (second price). Losing bids stay encrypted.`}</p>
+        <div class="agents">${r.agents.map((a) => `<div><b>${esc(a.name)}</b> ${esc(a.action)} <span class="${a.ok ? "ok" : "err"}">${a.ok ? "✔" : "✗ " + esc(a.error)}</span><br><span class="empty">${esc(a.brain === "rules" ? "rule-based" : a.brain)}: ${esc(a.reason)}</span><br>amount: sealed · ${near(a.near)} ${eth(a.eth)}</div>`).join("")}</div>
+        ${r.blocked ? `<div class="blocked"><b>${esc(r.blocked.agent)}</b> was hijacked and tried to ${esc(r.blocked.attempt)}: ${r.blocked.refused ? `<span class="err">refused by the vault — ${esc(r.blocked.reason)}</span>` : "not refused"} ${near(r.blocked.near)}</div>` : ""}
+        <div class="txs">${r.txs.map((t) => `${esc(t.what)}: ${eth(t.eth)} ${near(t.near)}`).join(" · ")}</div>
+      </article>`).join("") || '<p class="empty">No rounds yet.</p>';
+  } catch (e) { document.getElementById("rounds").innerHTML = '<p class="empty">The market has not published its first round yet.</p>'; }
+}
+load(); setInterval(load, 60000);
+</script>
+</body>
+</html>
