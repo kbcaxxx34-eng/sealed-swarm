@@ -50,7 +50,7 @@ test("configure creates one funded sub-account per agent with a key that can onl
     const k = p.actions[2];
     assert.equal(k.receiver, VAULT);
     assert.equal(k.methods, "request_sign");
-    assert.equal(k.allowance, QUARTER_NEAR);
+    assert.equal(k.allowance, 0n); // unlimited allowance; the 0.25 NEAR balance is the cap
     assert.equal(k.publicKey[0], 0); // ed25519
     assert.deepEqual([...k.publicKey.slice(1)], [...AGENTS[i].publicKey]);
   });

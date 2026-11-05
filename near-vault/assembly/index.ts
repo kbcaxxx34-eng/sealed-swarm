@@ -190,7 +190,7 @@ function selfId(): Uint8Array { current_account_id(REG); return readRegister(); 
 /// Binary args: [20 auction][1 n_fee][fee BE][1 n_gas][gas BE][1 n_agents]
 ///              then per agent: [1 name_len][name][32 ed25519 public key]
 /// Creates <name>.<vault> for each agent, funds it with 0.25 NEAR and adds the agent's key as a
-/// function-call key restricted to <vault>.request_sign.
+/// function-call key restricted to <vault>.request_sign (no allowance cap; the balance is the cap).
 export function configure(): void {
   if (sget("owner") != null) { fail("already configured"); return; }
   sset("owner", predecessor());
@@ -208,6 +208,7 @@ export function configure(): void {
   const selfStr = String.UTF8.decode(self.buffer);
   const fund = agentFund();
   const methods = utf8("request_sign");
+  const noAllowance = new Uint8Array(16);
   for (let i = 0; i < n; i++) {
     if (p >= a.length) { fail("bad agent list"); return; }
     const nl = <i32>a[p]; p += 1;
@@ -225,7 +226,10 @@ export function configure(): void {
     const pr = promise_batch_create(<u64>account.length, ptr(account));
     promise_batch_action_create_account(pr);
     promise_batch_action_transfer(pr, ptr(fund));
-    promise_batch_action_add_key_with_function_call(pr, 33, ptr(pk), 0, ptr(fund),
+    // allowance 0 = unlimited: a NEAR allowance is consumed by *prepaid* gas and never refunded, so a
+    // finite one would lock the agent out after a few 300 Tgas calls. The agent's balance (0.25 NEAR)
+    // is the real spending cap, and the key still can only call request_sign.
+    promise_batch_action_add_key_with_function_call(pr, 33, ptr(pk), 0, ptr(noAllowance),
       <u64>self.length, ptr(self), <u64>methods.length, ptr(methods));
   }
   if (p != a.length) { fail("trailing config bytes"); return; }

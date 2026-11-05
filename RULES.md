@@ -25,7 +25,7 @@ These are the rules the code enforces. Contract: [`contracts/SealedSwarmAuction.
 
 ## Agents and the swarm vault (NEAR)
 
-1. An owner creates a vault (`vault.<owner>`). The vault creates one sub-account per agent (`<agent>.vault.<owner>`), funds it with 0.25 NEAR, and gives it a single key: a function-call key that can only call `request_sign` on the vault.
+1. An owner creates a vault (`vault.<owner>`). The vault creates one sub-account per agent (`<agent>.vault.<owner>`), funds it with 0.25 NEAR (its gas budget), and gives it a single key: a function-call key that can only call `request_sign` on the vault.
 2. Each agent's Ethereum address is derived by NEAR Chain Signatures from the vault account and the path `sealedswarm-agent-<n>`. No one holds that private key.
 3. An agent asks for a signature by sending the unsigned Ethereum transaction to `request_sign`. The vault decodes it and signs only if **all** of these hold:
    - the caller is one of the vault's agent sub-accounts;
