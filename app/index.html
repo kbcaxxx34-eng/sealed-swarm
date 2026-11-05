@@ -1,0 +1,114 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>SealedSwarm — sealed-bid auctions for AI agent swarms</title>
+  <meta name="description" content="One NEAR account runs a swarm of bidding agents on Ethereum via Chain Signatures. Every bid is encrypted with Zama FHE; only the winner and the price are ever revealed." />
+  <style>
+    :root{--bg:#0b0e14;--card:#121722;--card2:#0f1320;--line:#232b3b;--txt:#e7ecf3;--mut:#8d98ab;--acc:#7c9cff;--acc2:#44d6b5;--ok:#3fb950;--err:#ff6b6b;--warn:#e3b341}
+    *{box-sizing:border-box}
+    body{margin:0;font:15px/1.55 ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif;background:var(--bg);color:var(--txt)}
+    a{color:var(--acc)}
+    main{max-width:1040px;margin:0 auto;padding:28px 18px 80px}
+    header h1{font-size:28px;margin:0;letter-spacing:-.02em}
+    header h1 span{background:linear-gradient(90deg,var(--acc),var(--acc2));-webkit-background-clip:text;background-clip:text;color:transparent}
+    header p{color:var(--mut);margin:6px 0 0;max-width:760px}
+    .pills{display:flex;gap:8px;flex-wrap:wrap;margin:14px 0 22px}
+    .pill{font-size:12px;border:1px solid var(--line);border-radius:999px;padding:3px 10px;color:var(--mut)}
+    section{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:18px;margin-bottom:16px}
+    h2{font-size:16px;margin:0 0 12px;display:flex;align-items:center;gap:10px}
+    h2 .n{width:24px;height:24px;border-radius:50%;background:var(--acc);color:#0b0e14;display:inline-grid;place-items:center;font-size:13px;font-weight:700}
+    .mut{color:var(--mut);font-size:13px}
+    button{background:var(--acc);color:#0b0e14;border:0;border-radius:8px;padding:9px 14px;font-weight:650;cursor:pointer;font:inherit;font-weight:650}
+    button:disabled{opacity:.4;cursor:not-allowed}
+    button.sec{background:transparent;color:var(--acc);border:1px solid var(--acc)}
+    button.ghost{background:transparent;color:var(--mut);border:1px solid var(--line)}
+    input,select{background:var(--card2);color:var(--txt);border:1px solid var(--line);border-radius:8px;padding:8px 10px;font:inherit}
+    .row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+    .grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+    @media(max-width:820px){.grid3{grid-template-columns:1fr}}
+    .agent{background:var(--card2);border:1px solid var(--line);border-radius:12px;padding:14px}
+    .agent h3{margin:0;font-size:15px}
+    .agent .style{font-size:12px;color:var(--acc2);margin-bottom:6px}
+    .agent .addr{font:12px ui-monospace,monospace;word-break:break-all;color:var(--mut)}
+    .agent .val{margin-top:8px;font-size:13px}
+    .agent label{font-size:12px;color:var(--mut);display:block;margin-top:8px}
+    .agent input{width:100%}
+    code{font:12px ui-monospace,monospace;background:var(--card2);padding:2px 6px;border-radius:5px;word-break:break-all}
+    table{width:100%;border-collapse:collapse;font-size:14px}
+    th,td{text-align:left;padding:8px 6px;border-bottom:1px solid var(--line);vertical-align:top}
+    th{color:var(--mut);font-weight:600;font-size:12px;text-transform:uppercase;letter-spacing:.04em}
+    tr.sel{background:#16203a}
+    .badge{font-size:11px;padding:2px 8px;border-radius:999px;border:1px solid var(--line)}
+    .b-open{color:var(--acc2);border-color:var(--acc2)} .b-closed{color:var(--warn);border-color:var(--warn)} .b-rev{color:var(--ok);border-color:var(--ok)}
+    #log{font:12px/1.55 ui-monospace,monospace;white-space:pre-wrap;max-height:300px;overflow:auto;background:var(--card2);border:1px solid var(--line);border-radius:10px;padding:10px}
+    .ok{color:var(--ok)} .err{color:var(--err)} .warn{color:var(--warn)}
+    .result{font-size:16px;margin-top:10px}
+    .lock{font-size:12px;color:var(--mut)}
+    footer{color:var(--mut);font-size:12px;text-align:center;margin-top:24px}
+  </style>
+</head>
+<body>
+<main>
+  <header>
+    <h1><span>SealedSwarm</span> — sealed-bid auctions for AI agent swarms</h1>
+    <p>One NEAR account runs a swarm of bidding agents on Ethereum through <b>NEAR Chain Signatures</b> — no Ethereum private keys anywhere. Every bid is encrypted with <b>Zama FHE</b> and compared on-chain without being decrypted. Second-price rules make truthful bidding the best strategy. Only the winner and the price are ever revealed.</p>
+    <div class="pills"><span class="pill">NEAR testnet · Chain Signatures</span><span class="pill">Ethereum Sepolia · Zama FHEVM</span><span class="pill">Vickrey (2nd-price) auction</span><span class="pill">Testnet only</span></div>
+  </header>
+
+  <section>
+    <h2><span class="n">1</span>Connect your NEAR account</h2>
+    <div class="row"><button id="btnNear">Connect Meteor Wallet</button><button id="btnNearOut" class="ghost" hidden>Disconnect</button><span id="nearInfo" class="mut">Use the Meteor Wallet extension on <b>Testnet</b> (account ending in <code>.testnet</code>).</span></div>
+  </section>
+
+  <section>
+    <h2><span class="n">2</span>Your swarm</h2>
+    <p class="mut">Each agent is an Ethereum address derived from your NEAR account and its own path. Nobody holds its private key: the NEAR MPC network signs for it, only when your account asks.</p>
+    <div class="grid3" id="agents"></div>
+    <div class="row" style="margin-top:12px">
+      <button id="btnFund" class="sec" disabled>Fund agents with MetaMask (0.004 ETH each)</button>
+      <button id="btnRefresh" class="ghost" disabled>Refresh balances</button>
+    </div>
+  </section>
+
+  <section>
+    <h2><span class="n">3</span>Auctions</h2>
+    <div class="row mut" style="margin-bottom:10px">Contract: <code id="contractAddr">—</code> <button id="btnDeploy" class="ghost">Deploy new contract (MetaMask)</button></div>
+    <div class="row" style="margin-bottom:12px">
+      <input id="item" placeholder="Item (e.g. 1 hour of H100 GPU)" style="flex:1;min-width:220px" />
+      <input id="duration" type="number" min="1" value="5" style="width:90px" title="minutes" /> <span class="mut">min</span>
+      <input id="reserve" type="number" min="0" value="50" style="width:100px" title="reserve price" /> <span class="mut">reserve</span>
+      <button id="btnCreate" disabled>Create auction (MetaMask)</button>
+    </div>
+    <table><thead><tr><th>#</th><th>Item</th><th>Reserve</th><th>Bids</th><th>Status</th><th>Result</th><th></th></tr></thead><tbody id="auctions"><tr><td colspan="7" class="mut">No contract yet.</td></tr></tbody></table>
+  </section>
+
+  <section>
+    <h2><span class="n">4</span>Swarm bids on auction <span id="selId">—</span></h2>
+    <div class="row">
+      <span class="mut">Market estimate</span><input id="estimate" type="number" min="1" value="100" style="width:110px" />
+      <button id="btnAppraise" class="sec" disabled>Agents appraise</button>
+      <button id="btnBid" disabled>Encrypt &amp; bid (one Meteor approval)</button>
+    </div>
+    <p class="lock">Valuations are computed in your browser and encrypted before leaving it. On-chain, other bidders, the seller and the contract only ever see ciphertexts.</p>
+    <div id="bidResult" class="result"></div>
+  </section>
+
+  <section>
+    <h2><span class="n">5</span>Close &amp; reveal</h2>
+    <div class="row"><button id="btnClose" class="sec" disabled>Close auction (MetaMask)</button><button id="btnReveal" disabled>Decrypt winner &amp; price, publish on-chain</button></div>
+    <p class="mut">Closing computes the outcome under encryption and marks only two values as publicly decryptable: the winner and the price (2nd-highest bid, or the reserve). Losing bids stay sealed forever.</p>
+    <div id="revealResult" class="result"></div>
+  </section>
+
+  <section>
+    <h2>Activity log</h2>
+    <div id="log"></div>
+  </section>
+
+  <footer>SealedSwarm · built at NEAR HACKATHON 2026 · testnet prototype, not audited</footer>
+</main>
+<script type="module" src="./src/main.js"></script>
+</body>
+</html>
