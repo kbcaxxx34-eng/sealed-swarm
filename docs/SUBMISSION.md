@@ -9,12 +9,12 @@
 
 ## What did you build? (form field, 20–2,000 characters)
 
-SealedSwarm lets one NEAR account run a swarm of AI bidding agents in sealed-bid auctions on Ethereum, with every bid encrypted end to end.
+SealedSwarm lets AI agent swarms buy scarce resources (e.g. GPU hours) in sealed-bid auctions on Ethereum, governed by a NEAR smart contract and with every bid encrypted end to end.
 
-Problem: on a public chain an agent's bid leaks its price, strategy and budget, and the last bidder can undercut everyone. Commit-reveal still exposes all bids at reveal time, and TEE-based sealed bids require trusting hardware vendors.
+Problem: on a public chain an agent's bid leaks its price, strategy and budget, and the last bidder can undercut everyone. And an autonomous agent holding a wallet is one prompt injection away from draining it.
 
-How it works: each agent is an Ethereum address derived from the user's NEAR account with NEAR Chain Signatures, so no agent holds a private key. Agents appraise the lot, their bids are encrypted in the browser with Zama FHE, and one Meteor approval asks the NEAR MPC network (v1.signer-prod.testnet) to sign all the bid transactions at once. On Sepolia, a new SealedSwarmAuction contract compares the ciphertexts (second-price/Vickrey rules, public reserve) without decrypting them. Closing marks only the winner and the price as decryptable; the result is published with a Zama KMS proof that the contract verifies. Losing bids are never revealed.
+How it works: the owner creates a swarm vault on NEAR in one approval. It stores a policy (approved auction contract, bid function only, zero ETH value, gas/fee caps, one bid per agent per auction, pause switch) and gives each agent a NEAR key that can only call the vault. Agents reason privately with TEE-hosted models on NEAR AI Cloud, encrypt their bid with Zama FHE and send the unsigned Ethereum transaction to the vault. The vault decodes it on-chain, checks the policy and only then asks the NEAR MPC network (Chain Signatures) to sign. No agent holds an Ethereum key and no wallet pop-up is needed per bid; a compromised agent trying to send ETH elsewhere is refused on-chain. On Sepolia, the SealedSwarmAuction contract compares ciphertexts under second-price (Vickrey) rules with a public reserve. Only the winner and price are revealed, with a Zama KMS proof verified by the contract; losing bids never are.
 
-NEAR's role: one account controls any number of agent addresses, keys never exist on the agent side, and a single approval authorizes a whole bidding round. Verified on testnet: 3 agents bid in one approval, the contract revealed Nova as winner paying 85 (the second price).
+NEAR's role: the vault contract, function-call access keys and Chain Signatures make agents autonomous but bounded. Verified on testnet: 3 agents bid, the contract revealed Nova as winner paying 85 (the second price).
 
-Built during the hackathon; 11 tests on the Zama FHE mock; testnet prototype, not audited.
+Built during the hackathon; 11 auction tests + 9 vault tests; testnet prototype, not audited.
