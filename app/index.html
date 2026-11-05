@@ -53,7 +53,7 @@
 <main>
   <header>
     <h1><span>SealedSwarm</span> — sealed-bid auctions for AI agent swarms</h1>
-    <p>One NEAR account runs a swarm of bidding agents on Ethereum through <b>NEAR Chain Signatures</b> — no Ethereum private keys anywhere. Every bid is encrypted with <b>Zama FHE</b> and compared on-chain without being decrypted. Second-price rules make truthful bidding the best strategy. Only the winner and the price are ever revealed.</p>
+    <p>A NEAR vault contract runs a swarm of bidding agents on Ethereum through <b>NEAR Chain Signatures</b>: no Ethereum private keys anywhere, and agents can only do what the vault's policy allows. Every bid is encrypted with <b>Zama FHE</b> and compared on-chain without being decrypted. Second-price rules make truthful bidding the best strategy. Only the winner and the price are ever revealed.</p>
     <div class="pills"><span class="pill">NEAR testnet · Chain Signatures</span><span class="pill">Ethereum Sepolia · Zama FHEVM</span><span class="pill">Vickrey (2nd-price) auction</span><span class="pill">Testnet only</span></div>
   </header>
 
@@ -63,8 +63,20 @@
   </section>
 
   <section>
-    <h2><span class="n">2</span>Your swarm</h2>
-    <p class="mut">Each agent is an Ethereum address derived from your NEAR account and its own path. Nobody holds its private key: the NEAR MPC network signs for it, only when your account asks.</p>
+    <h2><span class="n">2</span>Your swarm vault (NEAR)</h2>
+    <p class="mut">A NEAR contract you own. Agents hold only a restricted key that can call <code>request_sign</code> on the vault, nothing else. The vault checks every request against your policy (approved auction contract, <code>placeBid</code> only, no ETH, gas caps, one bid per auction) and only then asks the NEAR MPC network to sign for that agent's Ethereum address. You can pause every agent at once.</p>
+    <div class="row" style="margin-bottom:10px">
+      <span>Vault: <code id="vaultId">-</code></span>
+      <span id="vaultStatus" class="mut">not created</span>
+    </div>
+    <div class="row">
+      <button id="btnVault" disabled>Create vault (one Meteor approval)</button>
+      <button id="btnPause" class="ghost" disabled>Pause vault</button>
+      <button id="btnRogue" class="ghost" disabled>Simulate a compromised agent</button>
+    </div>
+    <div id="vaultResult" class="result"></div>
+    <h2 style="margin-top:18px">Agents</h2>
+    <p class="mut">Each agent is an Ethereum address derived from the vault account and the agent's path. Nobody holds its private key.</p>
     <div class="grid3" id="agents"></div>
     <div class="row" style="margin-top:12px">
       <button id="btnFund" class="sec" disabled>Fund agents with MetaMask (0.004 ETH each)</button>
@@ -89,9 +101,9 @@
     <div class="row">
       <span class="mut">Market estimate</span><input id="estimate" type="number" min="1" value="100" style="width:110px" />
       <button id="btnAppraise" class="sec" disabled>Agents appraise</button>
-      <button id="btnBid" disabled>Encrypt &amp; bid (one Meteor approval)</button>
+      <button id="btnBid" disabled>Agents bid on their own</button>
     </div>
-    <p class="lock">Valuations are computed in your browser and encrypted before leaving it. On-chain, other bidders, the seller and the contract only ever see ciphertexts.</p>
+    <p class="lock">No wallet pop-ups: each agent encrypts its bid and asks the vault; the vault gets it signed, or refuses. On-chain, other bidders, the seller and the contract only ever see ciphertexts.</p>
     <div id="bidResult" class="result"></div>
   </section>
 

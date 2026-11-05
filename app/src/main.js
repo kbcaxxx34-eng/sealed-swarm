@@ -1,8 +1,11 @@
-// SealedSwarm — one NEAR account, a swarm of bidding agents on Ethereum, every bid encrypted with Zama FHE.
+// SealedSwarm — a NEAR vault runs a swarm of bidding agents on Ethereum; every bid is encrypted with Zama FHE.
 import { setupWalletSelector } from "@near-wallet-selector/core";
 import { setupMeteorWallet } from "@near-wallet-selector/meteor-wallet";
-import { actionCreators } from "@near-js/transactions";
-import { getTransactionLastResult } from "@near-js/utils";
+import { actionCreators, createTransaction, encodeTransaction, SignedTransaction, Signature } from "@near-js/transactions";
+import { baseDecode, getTransactionLastResult } from "@near-js/utils";
+import { KeyPair } from "@near-js/crypto";
+import { JsonRpcProvider, FailoverRpcProvider } from "@near-js/providers";
+import vaultWasmUrl from "./swarm_vault.wasm?url";
 import { contracts, chainAdapters, utils } from "chainsig.js";
 import {
   createPublicClient, http, encodeFunctionData, formatEther, parseEther, toHex, keccak256, stringToBytes,
@@ -16,9 +19,14 @@ import artifact from "./contract.json";
 const DEFAULT_CONTRACT = "0x2B5a1C37967FC1612EE075d2516c3ACa7b543b05"; // Sepolia deployment used in the demo
 const MPC_CONTRACT = "v1.signer-prod.testnet";
 const SEPOLIA_RPC = "https://ethereum-sepolia-rpc.publicnode.com";
-const SIGN_GAS = 300000000000000n; // 300 Tgas
-const SIGN_DEPOSIT = 1n; // 1 yoctoNEAR (required by the MPC contract)
+const AGENT_CALL_GAS = 300000000000000n; // 300 Tgas for request_sign (the vault forwards 250 Tgas to the MPC)
+const TGAS = 1000000000000n;
+const NEAR = 1000000000000000000000000n; // 1 NEAR in yocto
 const FUND_AMOUNT = "0.004"; // ETH per agent
+const VAULT_DEPOSIT = 2n * NEAR; // storage + MPC deposits
+const AGENT_KEY_ALLOWANCE = NEAR; // gas allowance per agent key
+const POLICY_MAX_FEE = 50_000_000_000n; // 50 gwei
+const POLICY_MAX_GAS = 3_000_000n;
 
 const AGENTS = [
   { name: "Atlas", path: "sealedswarm-agent-1", style: "Value hunter", range: [0.7, 0.9], budget: 1000,
@@ -50,12 +58,17 @@ const publicClient = createPublicClient({ chain: sepolia, transport: http(SEPOLI
 const mpc = new contracts.ChainSignatureContract({ networkId: "testnet", contractId: MPC_CONTRACT });
 const evm = new chainAdapters.evm.EVM({ publicClient, contract: mpc });
 const abi = artifact.abi;
+const nearRpc = new FailoverRpcProvider([
+  new JsonRpcProvider({ url: "https://rpc.testnet.near.org" }),
+  new JsonRpcProvider({ url: "https://test.rpc.fastnear.com" }),
+]);
 
 const state = {
   selector: null, wallet: null, accountId: null,
   agents: AGENTS.map((a) => ({ ...a, address: null, balance: null, valuation: null, bid: null })),
   contract: localStorage.getItem("ssContract") || DEFAULT_CONTRACT,
   auctions: [], selected: null, fhe: null,
+  vaultId: null, vault: null, agentKeys: [],
 };
 
 async function getFhe() {
@@ -103,18 +116,156 @@ async function connectNear() {
 
 async function onNear(id) {
   state.accountId = id;
+  state.vaultId = `vault.${id}`;
   $("nearInfo").innerHTML = `Connected as <code>${id}</code>`;
   $("btnNear").hidden = true;
   $("btnNearOut").hidden = false;
+  $("vaultId").textContent = state.vaultId;
   if (!id.endsWith(".testnet")) log(`${id} does not look like a testnet account — switch Meteor to Testnet.`, "warn");
   log(`NEAR account connected: ${id}`, "ok");
+  loadAgentKeys();
   for (const a of state.agents) {
-    const { address } = await evm.deriveAddressAndPublicKey(id, a.path);
+    const { address } = await evm.deriveAddressAndPublicKey(state.vaultId, a.path);
     a.address = address;
   }
-  log("Swarm derived: " + state.agents.map((a) => `${a.name} ${short(a.address)}`).join(", "), "ok");
+  log("Agents derived from the vault: " + state.agents.map((a) => `${a.name} ${short(a.address)}`).join(", "), "ok");
+  await refreshVault();
   await refreshBalances();
   updateUi();
+}
+
+// ------------------------------------------------------------------ 2a. vault
+function loadAgentKeys() {
+  const k = `ssAgentKeys:${state.accountId}`;
+  let saved = null;
+  try { saved = JSON.parse(localStorage.getItem(k)); } catch (_) {}
+  if (!Array.isArray(saved) || saved.length !== AGENTS.length) {
+    saved = AGENTS.map(() => KeyPair.fromRandom("ed25519").toString());
+    try { localStorage.setItem(k, JSON.stringify(saved)); } catch (_) {}
+  }
+  state.agentKeys = saved.map((x) => KeyPair.fromString(x));
+}
+
+async function viewVault(method, argsBytes = new Uint8Array()) {
+  const res = await nearRpc.query({
+    request_type: "call_function", finality: "optimistic", account_id: state.vaultId,
+    method_name: method, args_base64: btoa(String.fromCharCode(...argsBytes)),
+  });
+  return new TextDecoder().decode(new Uint8Array(res.result));
+}
+
+async function refreshVault() {
+  try {
+    state.vault = JSON.parse(await viewVault("get_config"));
+    if (!state.vault.configured) throw new Error("not configured");
+    const okAuction = state.vault.auction.toLowerCase() === state.contract.toLowerCase();
+    $("vaultStatus").innerHTML = `<span class="${state.vault.paused ? "warn" : "ok"}">${state.vault.paused ? "PAUSED" : "active"}</span> · owner <code>${state.vault.owner}</code> · approved auction <code>${short(state.vault.auction)}</code>${okAuction ? "" : ' <span class="warn">(different from the contract below)</span>'} · ${state.vault.agents} agents`;
+    $("btnPause").textContent = state.vault.paused ? "Resume vault" : "Pause vault";
+  } catch (_) {
+    state.vault = null;
+    $("vaultStatus").textContent = "not created yet";
+  }
+  updateUi();
+}
+
+function vaultConfigBytes() {
+  const be = (v) => { let h = v.toString(16); if (h.length % 2) h = "0" + h; return h.match(/../g).map((x) => parseInt(x, 16)); };
+  const auction = state.contract.slice(2).match(/../g).map((x) => parseInt(x, 16));
+  const fee = be(POLICY_MAX_FEE), gas = be(POLICY_MAX_GAS);
+  const keys = state.agentKeys.flatMap((k) => [...k.getPublicKey().data]);
+  return new Uint8Array([...auction, fee.length, ...fee, gas.length, ...gas, state.agentKeys.length, ...keys]);
+}
+
+async function createVault() {
+  const btn = $("btnVault");
+  busy(btn, true, "Approve in Meteor…");
+  try {
+    const wasm = new Uint8Array(await (await fetch(vaultWasmUrl)).arrayBuffer());
+    const vaultTx = {
+      signerId: state.accountId, receiverId: state.vaultId,
+      actions: [
+        actionCreators.createAccount(),
+        actionCreators.transfer(VAULT_DEPOSIT),
+        actionCreators.deployContract(wasm),
+        actionCreators.functionCall("configure", vaultConfigBytes(), 30n * TGAS, 0n),
+      ],
+    };
+    const keysTx = {
+      signerId: state.accountId, receiverId: state.accountId,
+      actions: state.agentKeys.map((k) => actionCreators.addKey(k.getPublicKey(),
+        actionCreators.functionCallAccessKey(state.vaultId, ["request_sign"], AGENT_KEY_ALLOWANCE))),
+    };
+    log(`Creating ${state.vaultId}: deploy the vault, set the policy, give each agent a key that can only call request_sign.`);
+    await state.wallet.signAndSendTransactions({ transactions: [vaultTx, keysTx] });
+    log("Vault created and agents registered.", "ok");
+    await refreshVault();
+  } catch (e) { log("Vault creation failed: " + errMsg(e), "err"); }
+  busy(btn, false); updateUi();
+}
+
+async function togglePause() {
+  const btn = $("btnPause");
+  const pause = !(state.vault && state.vault.paused);
+  busy(btn, true, "Approve in Meteor…");
+  try {
+    await state.wallet.signAndSendTransaction({
+      receiverId: state.vaultId,
+      actions: [actionCreators.functionCall("pause", new Uint8Array([pause ? 1 : 0]), 10n * TGAS, 0n)],
+    });
+    log(pause ? "Vault paused: every agent is frozen." : "Vault resumed.", pause ? "warn" : "ok");
+    await refreshVault();
+  } catch (e) { log("Pause failed: " + errMsg(e), "err"); }
+  busy(btn, false); updateUi();
+}
+
+function nearFailure(outcome) {
+  const all = [outcome?.status, outcome?.transaction_outcome?.outcome?.status, ...(outcome?.receipts_outcome || []).map((r) => r.outcome.status)];
+  for (const st of all) {
+    if (st && st.Failure) {
+      const f = JSON.stringify(st.Failure);
+      const m = f.match(/Smart contract panicked: ([^"\\]+)/);
+      return m ? m[1] : f.slice(0, 200);
+    }
+  }
+  return null;
+}
+
+// An agent asks the vault to sign one Ethereum transaction, using only its restricted key.
+async function agentRequestSign(idx, unsignedTxHex) {
+  const kp = state.agentKeys[idx];
+  const pub = kp.getPublicKey();
+  const ak = await nearRpc.query({ request_type: "view_access_key", finality: "final", account_id: state.accountId, public_key: pub.toString() });
+  const block = await nearRpc.block({ finality: "final" });
+  const txBytes = Uint8Array.from(unsignedTxHex.slice(2).match(/../g).map((x) => parseInt(x, 16)));
+  const tx = createTransaction(state.accountId, pub, state.vaultId, BigInt(ak.nonce) + 1n,
+    [actionCreators.functionCall("request_sign", txBytes, AGENT_CALL_GAS, 0n)], baseDecode(block.header.hash));
+  const hash = new Uint8Array(await crypto.subtle.digest("SHA-256", encodeTransaction(tx)));
+  const signed = new SignedTransaction({ transaction: tx, signature: new Signature({ keyType: pub.keyType, data: kp.sign(hash).signature }) });
+  const outcome = await nearRpc.sendTransactionUntil(signed, "FINAL");
+  const failure = nearFailure(outcome);
+  if (failure) return { ok: false, reason: failure, nearTx: outcome?.transaction?.hash };
+  return { ok: true, sig: getTransactionLastResult(outcome), nearTx: outcome?.transaction?.hash };
+}
+
+async function simulateRogue() {
+  const btn = $("btnRogue");
+  busy(btn, true, "Attacking…");
+  $("vaultResult").innerHTML = "";
+  try {
+    const a = state.agents[1];
+    const attacker = "0x000000000000000000000000000000000000dEaD";
+    log(`Simulating a prompt-injected ${a.name}: it tries to send ETH to ${short(attacker)} using its own key.`, "warn");
+    const { transaction } = await evm.prepareTransactionForSigning({ from: a.address, to: attacker, value: parseEther("0.001") });
+    const r = await agentRequestSign(1, evm.serializeTransaction(transaction));
+    if (r.ok) {
+      log("Unexpected: the vault signed the rogue transaction (not broadcast).", "err");
+      $("vaultResult").innerHTML = '<span class="err">The vault signed it — policy bug.</span>';
+    } else {
+      log(`Vault refused ${a.name}: "${r.reason}". Nothing was signed.`, "ok");
+      $("vaultResult").innerHTML = `<span class="ok">Blocked on-chain by the vault: <b>${r.reason}</b>. No signature, no transfer.</span>`;
+    }
+  } catch (e) { log("Simulation failed: " + errMsg(e), "err"); }
+  busy(btn, false); updateUi();
 }
 
 // ------------------------------------------------------------------ 2. swarm
@@ -271,37 +422,29 @@ async function swarmBid() {
       input.add64(BigInt(a.bid));
       const enc = await input.encrypt();
       const data = encodeFunctionData({ abi, functionName: "placeBid", args: [id, toHex(enc.handles[0]), toHex(enc.inputProof)] });
-      const { transaction, hashesToSign } = await evm.prepareTransactionForSigning({ from: a.address, to: state.contract, data, value: 0n });
+      const { transaction } = await evm.prepareTransactionForSigning({ from: a.address, to: state.contract, data, value: 0n });
       const cost = (transaction.gas ?? 0n) * (transaction.maxFeePerGas ?? 0n);
       const bal = await publicClient.getBalance({ address: a.address });
       if (bal < cost) { log(`${a.name} needs ~${formatEther(cost)} ETH for gas (has ${formatEther(bal)}). Fund it first.`, "err"); continue; }
-      prepared.push({ a, transaction, payload: utils.cryptography.uint8ArrayToHex(hashesToSign[0]) });
+      prepared.push({ a, transaction });
       log(`${a.name}: bid encrypted (handle ${toHex(enc.handles[0]).slice(0, 14)}…) and transaction prepared.`, "ok");
     }
     if (!prepared.length) throw new Error("No agent bid to send.");
 
-    busy(btn, false); busy(btn, true, "Approve in Meteor…");
-    log(`Requesting ${prepared.length} MPC signatures from ${MPC_CONTRACT} — approve once in Meteor.`);
-    const outcomes = await state.wallet.signAndSendTransactions({
-      transactions: prepared.map((p) => ({
-        signerId: state.accountId,
-        receiverId: MPC_CONTRACT,
-        actions: [actionCreators.functionCall("sign",
-          { request: { payload_v2: { Ecdsa: p.payload }, path: p.a.path, domain_id: 0 } }, SIGN_GAS, SIGN_DEPOSIT)],
-      })),
-    });
-
-    busy(btn, false); busy(btn, true, "Broadcasting…");
+    busy(btn, false); busy(btn, true, "Agents asking the vault…");
+    log(`${prepared.length} agents ask the vault in parallel, each with its own restricted key. No wallet pop-up.`);
+    const results = await Promise.all(prepared.map(async (p) => {
+      const idx = state.agents.indexOf(p.a);
+      try { return { p, r: await agentRequestSign(idx, evm.serializeTransaction(p.transaction)) }; }
+      catch (e) { return { p, r: { ok: false, reason: errMsg(e) } }; }
+    }));
     const sent = [];
-    for (let i = 0; i < prepared.length; i++) {
-      const p = prepared[i];
-      const o = outcomes[i];
-      const nearTx = o?.transaction?.hash || o?.transaction_outcome?.id;
-      const sig = getTransactionLastResult(o);
-      if (!sig) { log(`${p.a.name}: MPC returned no signature.`, "err"); continue; }
-      const signed = evm.finalizeTransactionSigning({ transaction: p.transaction, rsvSignatures: [utils.cryptography.toRSV(sig)] });
+    for (const { p, r } of results) {
+      if (!r.ok) { log(`${p.a.name}: vault refused — ${r.reason}`, "err"); continue; }
+      log(`${p.a.name}: vault approved, MPC signed (NEAR tx ${r.nearTx ? r.nearTx.slice(0, 10) + "…" : ""}).`, "ok");
+      const signed = evm.finalizeTransactionSigning({ transaction: p.transaction, rsvSignatures: [utils.cryptography.toRSV(r.sig)] });
       const { hash } = await evm.broadcastTx(signed);
-      log(`${p.a.name}: NEAR sign ${nearTx ? nearTx.slice(0, 10) + "…" : ""} → Sepolia ${hash}`);
+      log(`${p.a.name}: sealed bid sent to Sepolia ${hash}`);
       sent.push({ a: p.a, hash });
     }
     let ok = 0;
@@ -374,11 +517,15 @@ function updateUi() {
   const now = Math.floor(Date.now() / 1000);
   const open = sel && !sel.closed && Number(sel.endTime) > now;
   const haveSwarm = state.agents.every((a) => a.address);
+  const vaultReady = !!(state.vault && state.vault.configured);
+  $("btnVault").disabled = !(state.wallet && state.accountId) || vaultReady;
+  $("btnPause").disabled = !vaultReady;
+  $("btnRogue").disabled = !(vaultReady && haveSwarm);
   $("btnFund").disabled = !haveSwarm;
   $("btnRefresh").disabled = !haveSwarm;
   $("btnCreate").disabled = !state.contract;
   $("btnAppraise").disabled = !(open && haveSwarm);
-  $("btnBid").disabled = !(open && haveSwarm && state.agents.some((a) => a.bid) && state.wallet);
+  $("btnBid").disabled = !(open && haveSwarm && state.agents.some((a) => a.bid) && vaultReady && !state.vault.paused);
   $("btnClose").disabled = !(sel && !sel.closed && Number(sel.endTime) <= now);
   $("btnReveal").disabled = !(sel && sel.closed && !sel.revealed);
 }
@@ -386,6 +533,9 @@ function updateUi() {
 $("btnNear").addEventListener("click", connectNear);
 $("btnNearOut").addEventListener("click", async () => { try { await state.wallet?.signOut(); } catch (_) {} location.reload(); });
 $("btnFund").addEventListener("click", fundAgents);
+$("btnVault").addEventListener("click", createVault);
+$("btnPause").addEventListener("click", togglePause);
+$("btnRogue").addEventListener("click", simulateRogue);
 $("btnRefresh").addEventListener("click", refreshBalances);
 $("btnDeploy").addEventListener("click", deployContract);
 $("btnCreate").addEventListener("click", createAuction);
