@@ -54,7 +54,7 @@
   <header>
     <h1><span>SealedSwarm</span> — sealed-bid auctions for AI agent swarms</h1>
     <p>A NEAR vault contract runs a swarm of bidding agents on Ethereum through <b>NEAR Chain Signatures</b>: no Ethereum private keys anywhere, and agents can only do what the vault's policy allows. Every bid is encrypted with <b>Zama FHE</b> and compared on-chain without being decrypted. Second-price rules make truthful bidding the best strategy. Only the winner and the price are ever revealed.</p>
-    <div class="pills"><span class="pill">NEAR testnet · Chain Signatures</span><span class="pill">Ethereum Sepolia · Zama FHEVM</span><span class="pill">Vickrey (2nd-price) auction</span><span class="pill">Testnet only</span></div>
+    <div class="pills"><span class="pill">NEAR testnet · Chain Signatures</span><span class="pill">Ethereum Sepolia · Zama FHEVM</span><span class="pill">Vickrey (2nd-price) auction</span><span class="pill">Encrypted buyer pools</span><span class="pill">NEAR AI Cloud (TEE)</span><span class="pill">Testnet only</span></div>
   </header>
 
   <section>
@@ -64,7 +64,7 @@
 
   <section>
     <h2><span class="n">2</span>Your swarm vault (NEAR)</h2>
-    <p class="mut">A NEAR contract you own. Agents hold only a restricted key that can call <code>request_sign</code> on the vault, nothing else. The vault checks every request against your policy (approved auction contract, <code>placeBid</code> only, no ETH, gas caps, one bid per auction) and only then asks the NEAR MPC network to sign for that agent's Ethereum address. You can pause every agent at once.</p>
+    <p class="mut">A NEAR contract you own. Each agent is a NEAR sub-account of the vault (<code>atlas.vault.you.testnet</code>, …) whose only key can call <code>request_sign</code> on the vault, nothing else. The vault checks every request against your policy (approved auction contract, <code>placeBid</code>/<code>joinPool</code>/<code>submitPool</code> only, no ETH, gas caps, one entry per auction) and only then asks the NEAR MPC network to sign for that agent's Ethereum address. You can pause every agent at once.</p>
     <div class="row" style="margin-bottom:10px">
       <span>Vault: <code id="vaultId">-</code></span>
       <span id="vaultStatus" class="mut">not created</span>
@@ -76,7 +76,7 @@
     </div>
     <div id="vaultResult" class="result"></div>
     <h2 style="margin-top:18px">Agents</h2>
-    <p class="mut">Each agent is an Ethereum address derived from the vault account and the agent's path. Nobody holds its private key.</p>
+    <p class="mut">On Ethereum, each agent is an address derived from the vault account and the agent's path. Nobody holds its private key. Agents that can't reach the reserve alone form an <b>encrypted buyer pool</b>: the contract adds their contributions under FHE and nobody, not even the other members, sees what each one put in.</p>
     <div class="grid3" id="agents"></div>
     <div class="row" style="margin-top:12px">
       <button id="btnFund" class="sec" disabled>Fund agents with MetaMask (0.004 ETH each)</button>
@@ -112,6 +112,7 @@
       <input id="aiKey" type="password" autocomplete="off" placeholder="NEAR AI Cloud API key (kept in memory only)" style="width:300px" />
       <button id="btnBid" disabled>Agents bid on their own</button>
     </div>
+    <div id="aiVerified" class="result" style="font-size:13px"></div>
     <p class="lock">No wallet pop-ups: each agent encrypts its bid and asks the vault; the vault gets it signed, or refuses. On-chain, other bidders, the seller and the contract only ever see ciphertexts.</p>
     <div id="bidResult" class="result"></div>
   </section>

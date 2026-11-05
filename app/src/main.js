@@ -8,7 +8,7 @@ import { JsonRpcProvider, FailoverRpcProvider } from "@near-js/providers";
 import vaultWasmUrl from "./swarm_vault.wasm?url";
 import { contracts, chainAdapters, utils } from "chainsig.js";
 import {
-  createPublicClient, http, encodeFunctionData, formatEther, parseEther, toHex, keccak256, stringToBytes,
+  createPublicClient, http, encodeFunctionData, recoverMessageAddress, formatEther, parseEther, toHex, keccak256, stringToBytes,
 } from "viem";
 import { sepolia } from "viem/chains";
 import { initSDK, createInstance, SepoliaConfig } from "@zama-fhe/relayer-sdk/web";
@@ -16,15 +16,14 @@ import { BrowserProvider, Contract, ContractFactory } from "ethers";
 import artifact from "./contract.json";
 
 // ------------------------------------------------------------------ config
-const DEFAULT_CONTRACT = "0x2B5a1C37967FC1612EE075d2516c3ACa7b543b05"; // Sepolia deployment used in the demo
+const DEFAULT_CONTRACT = ""; // v2 (buyer pools): set after the Sepolia deployment
 const MPC_CONTRACT = "v1.signer-prod.testnet";
 const SEPOLIA_RPC = "https://ethereum-sepolia-rpc.publicnode.com";
 const AGENT_CALL_GAS = 300000000000000n; // 300 Tgas for request_sign (the vault forwards 250 Tgas to the MPC)
 const TGAS = 1000000000000n;
 const NEAR = 1000000000000000000000000n; // 1 NEAR in yocto
 const FUND_AMOUNT = "0.004"; // ETH per agent
-const VAULT_DEPOSIT = 2n * NEAR; // storage + MPC deposits
-const AGENT_KEY_ALLOWANCE = NEAR; // gas allowance per agent key
+const VAULT_DEPOSIT = 3n * NEAR; // vault storage + 0.25 NEAR for each agent sub-account (it pays its own gas)
 const POLICY_MAX_FEE = 50_000_000_000n; // 50 gwei
 const POLICY_MAX_GAS = 3_000_000n;
 
@@ -67,9 +66,9 @@ const nearRpc = new FailoverRpcProvider([
 const state = {
   selector: null, wallet: null, accountId: null,
   agents: AGENTS.map((a) => ({ ...a, address: null, balance: null, valuation: null, bid: null })),
-  contract: localStorage.getItem("ssContract") || DEFAULT_CONTRACT,
+  contract: localStorage.getItem("ssContractV2") || DEFAULT_CONTRACT,
   auctions: [], selected: null, fhe: null,
-  vaultId: null, vault: null, agentKeys: [],
+  vaultId: null, vault: null, agentKeys: [], pools: {}, poolNames: {},
 };
 
 async function getFhe() {
@@ -160,7 +159,7 @@ async function refreshVault() {
     state.vault = JSON.parse(await viewVault("get_config"));
     if (!state.vault.configured) throw new Error("not configured");
     const okAuction = state.vault.auction.toLowerCase() === state.contract.toLowerCase();
-    $("vaultStatus").innerHTML = `<span class="${state.vault.paused ? "warn" : "ok"}">${state.vault.paused ? "PAUSED" : "active"}</span> · owner <code>${state.vault.owner}</code> · approved auction <code>${short(state.vault.auction)}</code>${okAuction ? "" : ' <span class="warn">(different from the contract below)</span>'} · ${state.vault.agents} agents`;
+    $("vaultStatus").innerHTML = `<span class="${state.vault.paused ? "warn" : "ok"}">${state.vault.paused ? "PAUSED" : "active"}</span> · owner <code>${state.vault.owner}</code> · approved auction <code>${short(state.vault.auction)}</code>${okAuction ? "" : ' <span class="warn">(different from the contract below — create a new vault for this contract)</span>'} · agents: ${(state.vault.agent_accounts || []).map((x) => `<code>${x.split(".")[0]}</code>`).join(", ")}`;
     $("btnPause").textContent = state.vault.paused ? "Resume vault" : "Pause vault";
   } catch (_) {
     state.vault = null;
@@ -169,12 +168,17 @@ async function refreshVault() {
   updateUi();
 }
 
+const agentAccount = (i) => `${state.agents[i].name.toLowerCase()}.${state.vaultId}`;
+
 function vaultConfigBytes() {
   const be = (v) => { let h = v.toString(16); if (h.length % 2) h = "0" + h; return h.match(/../g).map((x) => parseInt(x, 16)); };
   const auction = state.contract.slice(2).match(/../g).map((x) => parseInt(x, 16));
   const fee = be(POLICY_MAX_FEE), gas = be(POLICY_MAX_GAS);
-  const keys = state.agentKeys.flatMap((k) => [...k.getPublicKey().data]);
-  return new Uint8Array([...auction, fee.length, ...fee, gas.length, ...gas, state.agentKeys.length, ...keys]);
+  const agents = state.agentKeys.flatMap((k, i) => {
+    const name = [...new TextEncoder().encode(state.agents[i].name.toLowerCase())];
+    return [name.length, ...name, ...k.getPublicKey().data];
+  });
+  return new Uint8Array([...auction, fee.length, ...fee, gas.length, ...gas, state.agentKeys.length, ...agents]);
 }
 
 async function createVault() {
@@ -182,23 +186,17 @@ async function createVault() {
   busy(btn, true, "Approve in Meteor…");
   try {
     const wasm = new Uint8Array(await (await fetch(vaultWasmUrl)).arrayBuffer());
-    const vaultTx = {
-      signerId: state.accountId, receiverId: state.vaultId,
+    log(`Creating ${state.vaultId}: deploy the vault, set the policy, and create one sub-account per agent (${state.agents.map((_, i) => agentAccount(i)).join(", ")}), each with a key that can only call request_sign.`);
+    await state.wallet.signAndSendTransaction({
+      receiverId: state.vaultId,
       actions: [
         actionCreators.createAccount(),
         actionCreators.transfer(VAULT_DEPOSIT),
         actionCreators.deployContract(wasm),
-        actionCreators.functionCall("configure", vaultConfigBytes(), 30n * TGAS, 0n),
+        actionCreators.functionCall("configure", vaultConfigBytes(), 100n * TGAS, 0n),
       ],
-    };
-    const keysTx = {
-      signerId: state.accountId, receiverId: state.accountId,
-      actions: state.agentKeys.map((k) => actionCreators.addKey(k.getPublicKey(),
-        actionCreators.functionCallAccessKey(state.vaultId, ["request_sign"], AGENT_KEY_ALLOWANCE))),
-    };
-    log(`Creating ${state.vaultId}: deploy the vault, set the policy, give each agent a key that can only call request_sign.`);
-    await state.wallet.signAndSendTransactions({ transactions: [vaultTx, keysTx] });
-    log("Vault created and agents registered.", "ok");
+    });
+    log("Vault created and agent sub-accounts registered.", "ok");
     await refreshVault();
   } catch (e) { log("Vault creation failed: " + errMsg(e), "err"); }
   busy(btn, false); updateUi();
@@ -231,14 +229,16 @@ function nearFailure(outcome) {
   return null;
 }
 
-// An agent asks the vault to sign one Ethereum transaction, using only its restricted key.
+// An agent asks the vault to sign one Ethereum transaction, from its own NEAR sub-account, using
+// its only key (a function-call key restricted to vault.request_sign).
 async function agentRequestSign(idx, unsignedTxHex) {
   const kp = state.agentKeys[idx];
   const pub = kp.getPublicKey();
-  const ak = await nearRpc.query({ request_type: "view_access_key", finality: "final", account_id: state.accountId, public_key: pub.toString() });
+  const account = agentAccount(idx);
+  const ak = await nearRpc.query({ request_type: "view_access_key", finality: "final", account_id: account, public_key: pub.toString() });
   const block = await nearRpc.block({ finality: "final" });
   const txBytes = Uint8Array.from(unsignedTxHex.slice(2).match(/../g).map((x) => parseInt(x, 16)));
-  const tx = createTransaction(state.accountId, pub, state.vaultId, BigInt(ak.nonce) + 1n,
+  const tx = createTransaction(account, pub, state.vaultId, BigInt(ak.nonce) + 1n,
     [actionCreators.functionCall("request_sign", txBytes, AGENT_CALL_GAS, 0n)], baseDecode(block.header.hash));
   const hash = new Uint8Array(await crypto.subtle.digest("SHA-256", encodeTransaction(tx)));
   const signed = new SignedTransaction({ transaction: tx, signature: new Signature({ keyType: pub.keyType, data: kp.sign(hash).signature }) });
@@ -276,7 +276,8 @@ function renderAgents() {
       <h3>${a.name}</h3>
       <div class="style">${a.style}</div>
       <div class="mut">${a.why}</div>
-      <div class="addr" style="margin-top:8px">${a.address || "connect NEAR to derive"}</div>
+      <div class="mut" style="margin-top:6px">NEAR: <code>${state.vaultId ? `${a.name.toLowerCase()}.${state.vaultId}` : "—"}</code></div>
+      <div class="addr" style="margin-top:4px">${a.address || "connect NEAR to derive"}</div>
       <div class="mut">path <code>${a.path}</code> · ${a.balance == null ? "—" : Number(formatEther(a.balance)).toFixed(4) + " ETH"}</div>
       <label>Budget (units)</label><input type="number" min="1" value="${a.budget}" data-budget="${i}" />
       <div class="val">${a.valuation == null ? '<span class="mut">No appraisal yet</span>'
@@ -322,7 +323,7 @@ async function deployContract() {
     log("Deploy tx: " + c.deploymentTransaction().hash);
     await c.waitForDeployment();
     state.contract = await c.getAddress();
-    localStorage.setItem("ssContract", state.contract);
+    localStorage.setItem("ssContractV2", state.contract);
     log("SealedSwarmAuction deployed at " + state.contract, "ok");
     await loadAuctions();
   } catch (e) { log("Deploy failed: " + errMsg(e), "err"); }
@@ -358,6 +359,15 @@ async function loadAuctions() {
     for (let id = 1; id <= n; id++) {
       const a = await read("getAuction", [BigInt(id)]);
       list.push({ id, ...a });
+      const pc = Number(await read("poolCount", [BigInt(id)]));
+      for (let p = 1; p <= pc; p++) {
+        const [, , , pa] = await read("getPool", [BigInt(id), BigInt(p)]);
+        const members = await read("getPoolMembers", [BigInt(id), BigInt(p)]);
+        const names = members.map((m) => state.agents.find((x) => x.address?.toLowerCase() === m.toLowerCase())?.name || short(m));
+        state.poolAddr = state.poolAddr || {};
+        state.poolAddr[`${id}:${p}`] = pa;
+        state.poolNames[pa.toLowerCase()] = `#${p} (${names.join(" + ")})`;
+      }
     }
     state.auctions = list;
     if (state.selected == null && list.length) state.selected = list.at(-1).id;
@@ -367,7 +377,22 @@ async function loadAuctions() {
 
 function agentName(addr) {
   const a = state.agents.find((x) => x.address && x.address.toLowerCase() === addr.toLowerCase());
-  return a ? `${a.name} (${short(addr)})` : short(addr);
+  if (a) return `${a.name} (${short(addr)})`;
+  const p = state.poolNames[addr.toLowerCase()];
+  return p ? `pool ${p}` : short(addr);
+}
+
+// pool shares: each member pays price × own contribution / pool total. In the app all members are
+// your own agents, so the browser already knows the contributions; on-chain each member can only
+// decrypt its own contribution and the pool total.
+function poolShares(auctionId, winner, price) {
+  for (const [k, members] of Object.entries(state.pools)) {
+    if (!k.startsWith(auctionId + ":")) continue;
+    if (state.poolAddr?.[k]?.toLowerCase() !== winner.toLowerCase()) continue;
+    const total = members.reduce((s, m) => s + m.amount, 0);
+    return members.map((m) => `${m.name} pays ${(Number(price) * m.amount / total).toFixed(2)}`).join(", ");
+  }
+  return "";
 }
 
 function renderAuctions() {
@@ -403,29 +428,100 @@ function ruleValuation(a, est) {
   return Math.max(1, Math.round(est * f));
 }
 
+// ---- NEAR AI Cloud: private inference in a TEE, with attestation checks done in this browser
+const NEARAI = "https://cloud-api.near.ai/v1";
+const hexOf = (u8) => [...u8].map((b) => b.toString(16).padStart(2, "0")).join("");
+const bytesOf = (hex) => Uint8Array.from((hex.replace(/^0x/, "").match(/../g) || []).map((x) => parseInt(x, 16)));
+const sha256Hex = async (bytes) => hexOf(new Uint8Array(await crypto.subtle.digest("SHA-256", bytes)));
+
+// Preflight: fetch the model's TDX attestation for a fresh nonce and check what a browser can check.
+async function attestModel(model, key) {
+  const nonce = hexOf(crypto.getRandomValues(new Uint8Array(32)));
+  const q = new URLSearchParams({ model, provider: "near", include_tls_fingerprint: "false", signing_algo: "ecdsa", nonce });
+  const res = await fetch(`${NEARAI}/attestation/report?${q}`, { headers: { Accept: "application/json", Authorization: `Bearer ${key}` } });
+  if (!res.ok) throw new Error(`attestation HTTP ${res.status}`);
+  const rep = await res.json();
+  const cands = rep.model_attestations || [];
+  const checks = [];
+  const verified = [];
+  checks.push({ ok: cands.length > 0, text: `${cands.length} TEE attestation report(s) returned for ${model}` });
+  for (const c of cands) {
+    const quote = bytesOf(c.intel_quote || "");
+    const reportData = hexOf(quote.slice(568, 632)); // TDX quote v4: 48-byte header + 520 bytes before REPORTDATA
+    const signer = (c.signing_address || "").toLowerCase().replace(/^0x/, "");
+    const expected = signer.padEnd(64, "0") + nonce;
+    const nonceOk = c.request_nonce === nonce;
+    const bindOk = quote.length >= 632 && reportData === expected;
+    let cfgOk = null;
+    try {
+      let tcb = c.info?.tcb_info; if (typeof tcb === "string") tcb = JSON.parse(tcb);
+      const compose = tcb?.app_compose;
+      if (typeof compose === "string") {
+        const want = "01" + (await sha256Hex(new TextEncoder().encode(compose))) + "00".repeat(15);
+        cfgOk = hexOf(quote.slice(48 + 184, 48 + 232)) === want; // MRCONFIGID
+      }
+    } catch (_) { cfgOk = false; }
+    checks.push({ ok: nonceOk, text: `report echoes our fresh nonce (${nonce.slice(0, 10)}…)` });
+    checks.push({ ok: bindOk, text: `TDX quote REPORTDATA binds signer 0x${signer.slice(0, 8)}… and our nonce` });
+    if (cfgOk !== null) checks.push({ ok: cfgOk, text: "MRCONFIGID matches SHA-256 of the app compose (the code running in the TEE)" });
+    if (nonceOk && bindOk) verified.push({ signer: "0x" + signer, nvidia: !!c.nvidia_payload });
+    if (c.nvidia_payload) checks.push({ ok: true, text: "NVIDIA GPU evidence present (confidential-compute GPU)" });
+  }
+  checks.push({ ok: null, text: "Intel DCAP quote signature chain: not checked in the browser (verify with dcap-qvl, see README)" });
+  return { checks, verified };
+}
+
+// After a completion: fetch the TEE's signature and check it covers our exact request and response.
+async function verifyCompletion(model, key, chatId, reqBytes, resBytes, verified) {
+  const res = await fetch(`${NEARAI}/signature/${chatId}?signing_algo=ecdsa`, { headers: { Accept: "application/json", Authorization: `Bearer ${key}` } });
+  if (!res.ok) return { ok: false, text: `no signature for ${chatId} (HTTP ${res.status})` };
+  const sig = await res.json();
+  const want = `${model}:${await sha256Hex(reqBytes)}:${await sha256Hex(resBytes)}`;
+  const wantGw = want.slice(model.length + 1);
+  const textOk = sig.text === want || (sig.signature_kind === "gateway" && sig.text === wantGw);
+  let signerOk = false;
+  try { signerOk = (await recoverMessageAddress({ message: sig.text, signature: sig.signature })).toLowerCase() === String(sig.signing_address).toLowerCase(); } catch (_) {}
+  const attested = verified.some((v) => v.signer.toLowerCase() === String(sig.signing_address).toLowerCase());
+  return { ok: textOk && signerOk && (attested || sig.signature_kind === "gateway"),
+    text: `${sig.signature_kind || "signature"}: hashes match ${textOk ? "✔" : "✗"}, ECDSA signer recovered ${signerOk ? "✔" : "✗"}, signer is the attested TEE ${attested ? "✔" : sig.signature_kind === "gateway" ? "(gateway)" : "✗"}` };
+}
+
 // Each agent reasons privately on NEAR AI Cloud (models run inside TEEs). The model only proposes a
 // valuation; code caps it by the agent's budget, and the vault caps what can ever be signed.
-async function aiValuation(a, est, lot, key, model) {
-  const sys = `You are ${a.name}, an autonomous procurement agent in a sealed-bid second-price (Vickrey) auction. ` +
+async function aiValuation(a, est, lot, key, model, verified) {
+  const sys = `You are ${a.name}, an autonomous procurement agent buying GPU compute in a sealed-bid second-price (Vickrey) auction. ` +
     `Your style: ${a.style}. ${a.why} In a second-price auction the dominant strategy is to bid your true value. ` +
     `Answer with JSON only: {"valuation": <integer units>, "reason": "<max 20 words>"}.`;
   const user = `Lot: "${lot.item}". Public reserve: ${lot.reservePrice} units. Market estimate: ${est} units. ` +
     `Your budget: ${a.budget} units. What is this lot truly worth to you?`;
-  const res = await fetch("https://cloud-api.near.ai/v1/chat/completions", {
-    method: "POST",
-    headers: { "Content-Type": "application/json", Authorization: `Bearer ${key}` },
-    body: JSON.stringify({ model, temperature: 0.4, max_tokens: 400,
-      messages: [{ role: "system", content: sys }, { role: "user", content: user }] }),
-  });
+  const body = JSON.stringify({ model, temperature: 0.4, max_tokens: 400,
+    messages: [{ role: "system", content: sys }, { role: "user", content: user }] });
+  const reqBytes = new TextEncoder().encode(body);
+  const headers = { "Content-Type": "application/json", Authorization: `Bearer ${key}`, "x-no-aliasing": "true" };
+  let res;
+  try { res = await fetch(`${NEARAI}/chat/completions`, { method: "POST", headers, body: reqBytes }); }
+  catch (_) { // in case a browser/CORS setup rejects the extra header
+    delete headers["x-no-aliasing"];
+    res = await fetch(`${NEARAI}/chat/completions`, { method: "POST", headers, body: reqBytes });
+  }
   if (!res.ok) throw new Error(`NEAR AI HTTP ${res.status}`);
-  const out = await res.json();
+  const resBytes = new Uint8Array(await res.arrayBuffer());
+  const out = JSON.parse(new TextDecoder().decode(resBytes));
   const text = out?.choices?.[0]?.message?.content || "";
   const m = text.replace(/<think>[\s\S]*?<\/think>/g, "").match(/\{[\s\S]*\}/);
   if (!m) throw new Error("no JSON in model answer");
   const j = JSON.parse(m[0]);
   const v = Math.round(Number(j.valuation));
   if (!Number.isFinite(v) || v < 1) throw new Error("invalid valuation");
-  return { valuation: Math.min(v, est * 10), reason: String(j.reason || "").slice(0, 160) };
+  let proof = null;
+  try { proof = await verifyCompletion(model, key, out.id, reqBytes, resBytes, verified); } catch (e) { proof = { ok: false, text: errMsg(e) }; }
+  return { valuation: Math.min(v, est * 10), reason: String(j.reason || "").slice(0, 160), proof };
+}
+
+function renderVerified(model, checks) {
+  const icon = (ok) => ok === null ? "◻" : ok ? "✔" : "✗";
+  $("aiVerified").innerHTML = `<b>NEAR AI Cloud · ${escapeHtml(model)} · verification</b><ul style="margin:6px 0 0 18px;padding:0">` +
+    checks.map((c) => `<li class="${c.ok === null ? "mut" : c.ok ? "ok" : "err"}">${icon(c.ok)} ${escapeHtml(c.text)}</li>`).join("") + "</ul>";
 }
 
 async function appraise() {
@@ -435,13 +531,21 @@ async function appraise() {
   const key = $("aiKey").value.trim();
   const model = $("aiModel").value;
   busy(btn, true, key ? "Agents thinking…" : "Appraising…");
-  if (key) log(`Agents reason privately on NEAR AI Cloud (${model}, TEE). Their valuations never leave this browser in clear.`);
+  $("aiVerified").innerHTML = "";
+  let att = { checks: [], verified: [] };
+  if (key) {
+    log(`Agents reason privately on NEAR AI Cloud (${model}, TEE). Checking the TEE attestation first…`);
+    try { att = await attestModel(model, key); }
+    catch (e) { att.checks.push({ ok: false, text: `attestation unavailable: ${errMsg(e)}` }); }
+    renderVerified(model, att.checks);
+  }
   await Promise.all(state.agents.map(async (a) => {
     a.reason = null; a.brain = "rules";
     if (key) {
       try {
-        const r = await aiValuation(a, est, lot, key, model);
+        const r = await aiValuation(a, est, lot, key, model, att.verified);
         a.valuation = r.valuation; a.reason = r.reason; a.brain = model.split("/").pop();
+        if (r.proof) att.checks.push({ ok: r.proof.ok, text: `${a.name}'s answer — ${r.proof.text}` });
       } catch (e) {
         log(`${a.name}: NEAR AI unavailable (${errMsg(e)}); falling back to its rule-based strategy.`, "warn");
         a.valuation = ruleValuation(a, est);
@@ -452,58 +556,88 @@ async function appraise() {
     a.bid = Math.min(a.valuation, a.budget); // second-price: true value is optimal; the budget cap is enforced in code
     if (a.valuation > a.budget) log(`${a.name} valued it at ${a.valuation} but its budget caps the bid at ${a.budget}.`, "warn");
   }));
+  if (key) renderVerified(model, att.checks);
   log(`Agents appraised auction #${state.selected} ("${lot.item}") against a market estimate of ${est}.`);
   busy(btn, false);
   renderAgents(); updateUi();
 }
 
+// One agent transaction: prepare → vault policy check + MPC signature → broadcast → receipt.
+async function agentSend(a, data) {
+  const { transaction } = await evm.prepareTransactionForSigning({ from: a.address, to: state.contract, data, value: 0n });
+  const cost = (transaction.gas ?? 0n) * (transaction.maxFeePerGas ?? 0n);
+  const bal = await publicClient.getBalance({ address: a.address });
+  if (bal < cost) throw new Error(`${a.name} needs ~${formatEther(cost)} ETH for gas (has ${formatEther(bal)}). Fund it first.`);
+  const r = await agentRequestSign(state.agents.indexOf(a), evm.serializeTransaction(transaction));
+  if (!r.ok) throw new Error(`vault refused ${a.name}: ${r.reason}`);
+  log(`${a.name}: vault approved, MPC signed${r.nearTx ? ` (NEAR tx ${r.nearTx.slice(0, 10)}…)` : ""}.`, "ok");
+  const signed = evm.finalizeTransactionSigning({ transaction, rsvSignatures: [utils.cryptography.toRSV(r.sig)] });
+  const { hash } = await evm.broadcastTx(signed);
+  log(`${a.name}: sent to Sepolia ${hash}`);
+  const rc = await publicClient.waitForTransactionReceipt({ hash });
+  if (rc.status !== "success") throw new Error(`${a.name}: transaction reverted`);
+  return rc;
+}
+
+async function encryptFor(a, value) {
+  const fhe = await getFhe();
+  const input = fhe.createEncryptedInput(state.contract, a.address);
+  input.add64(BigInt(value));
+  const enc = await input.encrypt();
+  log(`${a.name}: amount encrypted in this browser (handle ${toHex(enc.handles[0]).slice(0, 14)}…).`);
+  return enc;
+}
+
 async function swarmBid() {
   const btn = $("btnBid");
   const id = BigInt(state.selected);
-  busy(btn, true, "Encrypting…");
+  const lot = state.auctions.find((x) => x.id === state.selected);
+  const reserve = Number(lot?.reservePrice ?? 0);
+  busy(btn, true, "Agents bidding…");
   $("bidResult").innerHTML = "";
+  let solos = 0, pooled = 0;
   try {
-    const fhe = await getFhe();
-    const prepared = [];
+    const ready = [];
     for (const a of state.agents) {
       if (!a.bid) continue;
-      if (await read("hasBid", [id, a.address])) { log(`${a.name} already bid on #${id}.`, "warn"); continue; }
-      const input = fhe.createEncryptedInput(state.contract, a.address);
-      input.add64(BigInt(a.bid));
-      const enc = await input.encrypt();
-      const data = encodeFunctionData({ abi, functionName: "placeBid", args: [id, toHex(enc.handles[0]), toHex(enc.inputProof)] });
-      const { transaction } = await evm.prepareTransactionForSigning({ from: a.address, to: state.contract, data, value: 0n });
-      const cost = (transaction.gas ?? 0n) * (transaction.maxFeePerGas ?? 0n);
-      const bal = await publicClient.getBalance({ address: a.address });
-      if (bal < cost) { log(`${a.name} needs ~${formatEther(cost)} ETH for gas (has ${formatEther(bal)}). Fund it first.`, "err"); continue; }
-      prepared.push({ a, transaction });
-      log(`${a.name}: bid encrypted (handle ${toHex(enc.handles[0]).slice(0, 14)}…) and transaction prepared.`, "ok");
+      if (await read("hasBid", [id, a.address])) { log(`${a.name} already entered auction #${id}.`, "warn"); continue; }
+      ready.push(a);
     }
-    if (!prepared.length) throw new Error("No agent bid to send.");
+    if (!ready.length) throw new Error("No agent bid to send.");
+    // agents that can reach the reserve bid alone; the others pool their budgets (if at least two)
+    let solo = ready.filter((a) => a.bid >= reserve);
+    let pool = ready.filter((a) => a.bid < reserve);
+    if (pool.length === 1) { log(`${pool[0].name} can't reach the reserve alone and has no partner; it sits out.`, "warn"); pool = []; }
+    log(`No wallet pop-ups: each agent signs with its own NEAR sub-account; the vault checks the policy, then asks the NEAR MPC network to sign.`);
 
-    busy(btn, false); busy(btn, true, "Agents asking the vault…");
-    log(`${prepared.length} agents ask the vault in parallel, each with its own restricted key. No wallet pop-up.`);
-    const results = await Promise.all(prepared.map(async (p) => {
-      const idx = state.agents.indexOf(p.a);
-      try { return { p, r: await agentRequestSign(idx, evm.serializeTransaction(p.transaction)) }; }
-      catch (e) { return { p, r: { ok: false, reason: errMsg(e) } }; }
+    // solo bids in parallel
+    const soloRes = await Promise.allSettled(solo.map(async (a) => {
+      const enc = await encryptFor(a, a.bid);
+      await agentSend(a, encodeFunctionData({ abi, functionName: "placeBid", args: [id, toHex(enc.handles[0]), toHex(enc.inputProof)] }));
+      log(`${a.name}: sealed bid accepted on-chain.`, "ok");
     }));
-    const sent = [];
-    for (const { p, r } of results) {
-      if (!r.ok) { log(`${p.a.name}: vault refused — ${r.reason}`, "err"); continue; }
-      log(`${p.a.name}: vault approved, MPC signed (NEAR tx ${r.nearTx ? r.nearTx.slice(0, 10) + "…" : ""}).`, "ok");
-      const signed = evm.finalizeTransactionSigning({ transaction: p.transaction, rsvSignatures: [utils.cryptography.toRSV(r.sig)] });
-      const { hash } = await evm.broadcastTx(signed);
-      log(`${p.a.name}: sealed bid sent to Sepolia ${hash}`);
-      sent.push({ a: p.a, hash });
+    soloRes.forEach((r, i) => { if (r.status === "fulfilled") solos++; else log(`${solo[i].name}: ${errMsg(r.reason)}`, "err"); });
+
+    // buyer pool: creator opens it, the others join, the creator submits the encrypted total
+    if (pool.length) {
+      log(`${pool.map((a) => a.name).join(" + ")} can't reach the reserve (${reserve}) alone: they form an encrypted buyer pool.`);
+      const [creator, ...rest] = pool;
+      let enc = await encryptFor(creator, creator.bid);
+      await agentSend(creator, encodeFunctionData({ abi, functionName: "joinPool", args: [id, 0n, toHex(enc.handles[0]), toHex(enc.inputProof)] }));
+      const poolId = await read("poolCount", [id]);
+      log(`${creator.name} opened pool #${poolId} with an encrypted contribution.`, "ok");
+      pooled = 1;
+      const joinRes = await Promise.allSettled(rest.map(async (a) => {
+        const e = await encryptFor(a, a.bid);
+        await agentSend(a, encodeFunctionData({ abi, functionName: "joinPool", args: [id, poolId, toHex(e.handles[0]), toHex(e.inputProof)] }));
+        log(`${a.name} joined pool #${poolId} (its contribution stays encrypted, even to the other members).`, "ok");
+      }));
+      joinRes.forEach((r, i) => { if (r.status === "fulfilled") pooled++; else log(`${rest[i].name}: ${errMsg(r.reason)}`, "err"); });
+      await agentSend(creator, encodeFunctionData({ abi, functionName: "submitPool", args: [id, poolId] }));
+      log(`Pool #${poolId} submitted: the contract added the contributions under encryption; the total competes as one bid.`, "ok");
+      state.pools[`${state.selected}:${poolId}`] = pool.filter((_, i) => i === 0 || joinRes[i - 1].status === "fulfilled").map((a) => ({ name: a.name, amount: a.bid }));
     }
-    let ok = 0;
-    for (const s of sent) {
-      const r = await publicClient.waitForTransactionReceipt({ hash: s.hash });
-      if (r.status === "success") { ok++; log(`${s.a.name}: sealed bid accepted on-chain.`, "ok"); }
-      else log(`${s.a.name}: transaction reverted.`, "err");
-    }
-    $("bidResult").innerHTML = `<span class="${ok ? "ok" : "err"}">${ok}/${prepared.length} sealed bids accepted on auction #${id}.</span>`;
+    $("bidResult").innerHTML = `<span class="ok">${solos} sealed solo bid(s)${pooled ? ` + 1 encrypted pool of ${pooled} agents` : ""} on auction #${id}.</span>`;
     await loadAuctions();
   } catch (e) {
     log("Swarm bid failed: " + errMsg(e), "err");
@@ -512,7 +646,6 @@ async function swarmBid() {
   busy(btn, false); updateUi();
 }
 
-// ------------------------------------------------------------------ 5. close & reveal
 async function closeAuction() {
   const btn = $("btnClose");
   busy(btn, true, "Closing…");
@@ -556,7 +689,7 @@ async function revealAuction() {
     const a = state.auctions.find((x) => BigInt(x.id) === id);
     $("revealResult").innerHTML = a.winner === "0x0000000000000000000000000000000000000000"
       ? '<span class="warn">No sale: every bid was below the reserve.</span>'
-      : `<span class="ok">Winner: <b>${agentName(a.winner)}</b> — pays <b>${a.price}</b> (second price). All losing bids remain encrypted.</span>`;
+      : `<span class="ok">Winner: <b>${agentName(a.winner)}</b> — pays <b>${a.price}</b> (second price). All losing bids remain encrypted.${poolShares(a.id, a.winner, a.price) ? ` Pool shares: ${poolShares(a.id, a.winner, a.price)}.` : ""}</span>`;
   } catch (e) { log("Reveal failed: " + errMsg(e), "err"); }
   busy(btn, false); updateUi();
 }
@@ -568,7 +701,7 @@ function updateUi() {
   const open = sel && !sel.closed && Number(sel.endTime) > now;
   const haveSwarm = state.agents.every((a) => a.address);
   const vaultReady = !!(state.vault && state.vault.configured);
-  $("btnVault").disabled = !(state.wallet && state.accountId) || vaultReady;
+  $("btnVault").disabled = !(state.wallet && state.accountId && state.contract) || vaultReady;
   $("btnPause").disabled = !vaultReady;
   $("btnRogue").disabled = !(vaultReady && haveSwarm);
   $("btnFund").disabled = !haveSwarm;
