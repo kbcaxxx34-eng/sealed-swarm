@@ -13,7 +13,7 @@ import { BrowserProvider, Contract, ContractFactory } from "ethers";
 import artifact from "./contract.json";
 
 // ------------------------------------------------------------------ config
-const DEFAULT_CONTRACT = ""; // filled after the first deployment
+const DEFAULT_CONTRACT = "0x2B5a1C37967FC1612EE075d2516c3ACa7b543b05"; // Sepolia deployment used in the demo
 const MPC_CONTRACT = "v1.signer-prod.testnet";
 const SEPOLIA_RPC = "https://ethereum-sepolia-rpc.publicnode.com";
 const SIGN_GAS = 300000000000000n; // 300 Tgas

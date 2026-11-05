@@ -1,27 +1,26 @@
 {
-  "name": "fhevm-hardhat-template",
-  "description": "Hardhat-based template for developing FHEVM Solidity smart contracts",
-  "version": "0.4.1",
+  "name": "sealed-swarm",
+  "description": "SealedSwarm: sealed-bid auctions for AI agent swarms (NEAR Chain Signatures + Zama FHE)",
+  "version": "0.1.0",
   "engines": {
     "node": ">=20",
     "npm": ">=7.0.0"
   },
-  "license": "BSD-3-Clause-Clear",
-  "homepage": "https://github.com/zama-ai/fhevm-hardhat-template/README.md",
+  "license": "MIT",
+  "homepage": "https://sealedbid.lercomigo.space/swarm/",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/zama-ai/fhevm-hardhat-template.git"
+    "url": "git+https://github.com/kbcaxxx34-eng/sealed-swarm.git"
   },
   "keywords": [
-    "fhevm",
+    "near",
+    "chain-signatures",
+    "fhe",
     "zama",
-    "eth",
-    "ethereum",
-    "dapps",
-    "wallet",
-    "web3",
-    "typescript",
-    "hardhat"
+    "fhevm",
+    "sealed-bid",
+    "vickrey",
+    "ai-agents"
   ],
   "dependencies": {
     "@fhevm/mock-utils": "^0.4.2",
