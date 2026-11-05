@@ -1,17 +1,21 @@
 // SwarmVault — a NEAR contract that controls a swarm of bidding agents.
 //
-// Agents never hold an Ethereum key and never hold a full-access NEAR key. Each agent holds a
-// function-call key on the owner's account that can only call `request_sign` on this vault.
-// The vault checks every request against the owner's policy, then asks the NEAR MPC network to
-// sign the Ethereum transaction for that agent's derived address (path sealedswarm-agent-<n>).
+// Each agent is its own NEAR sub-account of the vault (atlas.vault.alice.testnet, ...), created
+// by the vault at configuration. The only key on an agent account is a function-call key that can
+// call `request_sign` on this vault, so an agent cannot move its NEAR, add keys or call anything
+// else. Agents never hold an Ethereum key. The vault checks every request against the owner's
+// policy, then asks the NEAR MPC network to sign the Ethereum transaction for that agent's
+// derived address (vault account + path sealedswarm-agent-<n>).
 //
 // Policy enforced on-chain, per request:
-//   - the caller is the owner account and the key used is a registered agent key
+//   - the caller is one of the vault's agent sub-accounts
 //   - the vault is not paused
 //   - the Ethereum transaction is EIP-1559 on Sepolia (chain id 11155111)
-//   - it calls the approved auction contract, function placeBid(uint256,bytes32,bytes), with no ETH value
+//   - it calls the approved auction contract with no ETH value, and only these functions:
+//     placeBid(uint256,bytes32,bytes), joinPool(uint256,uint256,bytes32,bytes), submitPool(uint256,uint256)
 //   - gas limit and max fee per gas are under the owner's caps
-//   - each agent bids at most once per auction
+//   - each agent enters each auction at most once (one bid, or one pool contribution);
+//     submitPool is allowed only for an agent that already joined a pool in that auction
 //
 // Written against the raw NEAR host API (no SDK) and compiled with AssemblyScript.
 
@@ -25,10 +29,14 @@
 @external("env", "storage_write") declare function storage_write(key_len: u64, key_ptr: u64, value_len: u64, value_ptr: u64, register_id: u64): u64;
 @external("env", "storage_read") declare function storage_read(key_len: u64, key_ptr: u64, register_id: u64): u64;
 @external("env", "predecessor_account_id") declare function predecessor_account_id(register_id: u64): void;
-@external("env", "signer_account_pk") declare function signer_account_pk(register_id: u64): void;
 @external("env", "keccak256") declare function keccak256(value_len: u64, value_ptr: u64, register_id: u64): void;
 @external("env", "promise_create") declare function promise_create(account_id_len: u64, account_id_ptr: u64, method_name_len: u64, method_name_ptr: u64, arguments_len: u64, arguments_ptr: u64, amount_ptr: u64, gas: u64): u64;
 @external("env", "promise_return") declare function promise_return(promise_idx: u64): void;
+@external("env", "current_account_id") declare function current_account_id(register_id: u64): void;
+@external("env", "promise_batch_create") declare function promise_batch_create(account_id_len: u64, account_id_ptr: u64): u64;
+@external("env", "promise_batch_action_create_account") declare function promise_batch_action_create_account(promise_index: u64): void;
+@external("env", "promise_batch_action_transfer") declare function promise_batch_action_transfer(promise_index: u64, amount_ptr: u64): void;
+@external("env", "promise_batch_action_add_key_with_function_call") declare function promise_batch_action_add_key_with_function_call(promise_index: u64, public_key_len: u64, public_key_ptr: u64, nonce: u64, allowance_ptr: u64, receiver_id_len: u64, receiver_id_ptr: u64, method_names_len: u64, method_names_ptr: u64): void;
 
 const REG: u64 = 0;
 const MPC_ACCOUNT = "v1.signer-prod.testnet";
@@ -36,7 +44,11 @@ const SIGN_GAS: u64 = 250_000_000_000_000; // 250 Tgas for the MPC sign call
 const PATH_PREFIX = "sealedswarm-agent-";
 const SEPOLIA_CHAIN_ID: StaticArray<u8> = [0xaa, 0x36, 0xa7]; // 11155111
 const PLACE_BID_SELECTOR: StaticArray<u8> = [0x3e, 0xc0, 0x4a, 0x7d]; // placeBid(uint256,bytes32,bytes)
+const JOIN_POOL_SELECTOR: StaticArray<u8> = [0x0e, 0xc8, 0x0e, 0xb9]; // joinPool(uint256,uint256,bytes32,bytes)
+const SUBMIT_POOL_SELECTOR: StaticArray<u8> = [0x25, 0xe2, 0x1f, 0xba]; // submitPool(uint256,uint256)
 const MAX_AGENTS: i32 = 16;
+// 0.25 NEAR, u128 little-endian: funds each agent account for gas (and is its key's allowance)
+
 
 // ------------------------------------------------------------------ low-level helpers
 function ptr(a: Uint8Array): u64 { return <u64>a.dataStart; }
@@ -163,12 +175,25 @@ function slice(b: Uint8Array, it: Item): Uint8Array { return b.subarray(it.start
 
 // ------------------------------------------------------------------ methods
 
-/// configure(args): first call sets the caller as owner; later calls must come from the owner.
-/// Binary args: [20 auction][1 n_fee][fee BE][1 n_gas][gas BE][1 n_agents][n_agents x 32 ed25519 keys]
+// 0.25 NEAR = 250_000_000_000_000_000_000_000 yocto, as u128 little-endian
+function agentFund(): Uint8Array {
+  const out = new Uint8Array(16);
+  // 0x34F086F3B33B68400000 (big-endian) = 2.5e23
+  const be: StaticArray<u8> = [0x34, 0xf0, 0x86, 0xf3, 0xb3, 0x3b, 0x68, 0x40, 0x00, 0x00];
+  for (let i = 0; i < be.length; i++) out[i] = be[be.length - 1 - i];
+  return out;
+}
+
+function selfId(): Uint8Array { current_account_id(REG); return readRegister(); }
+
+/// configure(args): one-time setup; the caller becomes the owner.
+/// Binary args: [20 auction][1 n_fee][fee BE][1 n_gas][gas BE][1 n_agents]
+///              then per agent: [1 name_len][name][32 ed25519 public key]
+/// Creates <name>.<vault> for each agent, funds it with 0.25 NEAR and adds the agent's key as a
+/// function-call key restricted to <vault>.request_sign.
 export function configure(): void {
-  const owner = sget("owner");
-  if (owner == null) sset("owner", predecessor());
-  else ownerOrFail();
+  if (sget("owner") != null) { fail("already configured"); return; }
+  sset("owner", predecessor());
 
   const a = readInput();
   let p = 0;
@@ -178,16 +203,35 @@ export function configure(): void {
   const ng = <i32>a[p]; p += 1; sset("maxgas", a.slice(p, p + ng)); p += ng;
   const n = <i32>a[p]; p += 1;
   if (n < 1 || n > MAX_AGENTS) { fail("1 to 16 agents"); return; }
-  if (a.length != p + n * 32) { fail("bad agent keys"); return; }
+
+  const self = selfId();
+  const selfStr = String.UTF8.decode(self.buffer);
+  const fund = agentFund();
+  const methods = utf8("request_sign");
   for (let i = 0; i < n; i++) {
+    if (p >= a.length) { fail("bad agent list"); return; }
+    const nl = <i32>a[p]; p += 1;
+    if (nl < 2 || nl > 16 || p + nl + 32 > a.length) { fail("bad agent entry"); return; }
+    const name = a.slice(p, p + nl); p += nl;
+    for (let j = 0; j < nl; j++) {
+      const c = name[j];
+      if (!((c >= 0x61 && c <= 0x7a) || (c >= 0x30 && c <= 0x39))) { fail("agent names: a-z and 0-9 only"); return; }
+    }
     const pk = new Uint8Array(33); // borsh PublicKey: 0 = ed25519, then 32 bytes
-    pk[0] = 0;
-    pk.set(a.subarray(p + i * 32, p + i * 32 + 32), 1);
-    sset("a" + i.toString(), pk);
+    pk.set(a.subarray(p, p + 32), 1); p += 32;
+    const account = utf8(String.UTF8.decode(name.buffer) + "." + selfStr);
+    sset("a" + i.toString(), account);
+
+    const pr = promise_batch_create(<u64>account.length, ptr(account));
+    promise_batch_action_create_account(pr);
+    promise_batch_action_transfer(pr, ptr(fund));
+    promise_batch_action_add_key_with_function_call(pr, 33, ptr(pk), 0, ptr(fund),
+      <u64>self.length, ptr(self), <u64>methods.length, ptr(methods));
   }
+  if (p != a.length) { fail("trailing config bytes"); return; }
   const nb = new Uint8Array(1); nb[0] = <u8>n; sset("n", nb);
   const z = new Uint8Array(1); sset("paused", z);
-  log("SwarmVault configured with " + n.toString() + " agents");
+  log("SwarmVault configured with " + n.toString() + " agent sub-accounts");
 }
 
 /// pause(args: 1 byte, 1 = paused): emergency stop, owner only.
@@ -200,24 +244,22 @@ export function pause(): void {
 }
 
 /// request_sign(args: unsigned EIP-1559 transaction bytes, 0x02 || rlp(...)).
-/// Called by an agent through its function-call key on the owner account.
+/// Called by an agent from its own sub-account (its only key is restricted to this method).
 export function request_sign(): void {
-  const paused = sget("paused");
-  if (paused != null && paused!.length > 0 && paused![0] == 1) { fail("vault is paused"); return; }
-  ownerOrFail();
-
-  // which agent? identified by the public key that signed this transaction
-  signer_account_pk(REG);
-  const pk = readRegister();
   const nb = sget("n");
   if (nb == null) { fail("not configured"); return; }
+  const paused = sget("paused");
+  if (paused != null && paused!.length > 0 && paused![0] == 1) { fail("vault is paused"); return; }
+
+  // which agent? identified by the calling sub-account
+  const caller = predecessor();
   const n = <i32>nb![0];
   let agent = -1;
   for (let i = 0; i < n; i++) {
     const k = sget("a" + i.toString());
-    if (k != null && eq(k!, pk)) { agent = i; break; }
+    if (k != null && eq(k!, caller)) { agent = i; break; }
   }
-  if (agent < 0) { fail("this key is not a registered agent"); return; }
+  if (agent < 0) { fail("caller is not one of this vault's agents"); return; }
 
   // decode and check the Ethereum transaction
   const tx = readInput();
@@ -243,17 +285,31 @@ export function request_sign(): void {
   if (!leBE(slice(tx, maxFee), sget("maxfee")!)) { fail("max fee per gas above the owner's cap"); return; }
   if (!leBE(slice(tx, gas), sget("maxgas")!)) { fail("gas limit above the owner's cap"); return; }
   const d = slice(tx, data);
-  if (d.length < 36 || !eqStatic(d.subarray(0, 4), PLACE_BID_SELECTOR)) { fail("only placeBid is allowed"); return; }
+  if (d.length < 36) { fail("only placeBid, joinPool and submitPool are allowed"); return; }
+  const sel = d.subarray(0, 4);
+  const isBid = eqStatic(sel, PLACE_BID_SELECTOR);
+  const isJoin = eqStatic(sel, JOIN_POOL_SELECTOR);
+  const isSubmit = eqStatic(sel, SUBMIT_POOL_SELECTOR);
+  if (!isBid && !isJoin && !isSubmit) { fail("only placeBid, joinPool and submitPool are allowed"); return; }
   if (nonce.isList || prio.isList) { fail("malformed transaction"); return; }
 
-  // one bid per agent per auction
+  // each agent enters each auction once (a bid or a pool contribution)
   const usedKey = new Uint8Array(1 + 1 + 32);
   usedKey[0] = 0x75; // 'u'
   usedKey[1] = <u8>agent;
   usedKey.set(d.subarray(4, 36), 2);
-  if (sgetBytesKey(usedKey)) { fail("this agent already bid on this auction"); return; }
-  const one = new Uint8Array(1); one[0] = 1;
-  ssetBytesKey(usedKey, one);
+  const entered = sgetBytesKey(usedKey);
+  if (isSubmit) {
+    if (!entered) { fail("submitPool: this agent has not joined a pool in this auction"); return; }
+    const sk = new Uint8Array(34); sk.set(usedKey); sk[0] = 0x73; // 's'
+    if (sgetBytesKey(sk)) { fail("this agent already submitted a pool in this auction"); return; }
+    const one = new Uint8Array(1); one[0] = 1;
+    ssetBytesKey(sk, one);
+  } else {
+    if (entered) { fail("this agent already bid on this auction"); return; }
+    const one = new Uint8Array(1); one[0] = 1;
+    ssetBytesKey(usedKey, one);
+  }
 
   // payload = keccak256(0x02 || rlp(...)), signed for this agent's path
   keccak256(<u64>tx.length, ptr(tx), REG);
@@ -263,7 +319,8 @@ export function request_sign(): void {
   const acc = utf8(MPC_ACCOUNT);
   const method = utf8("sign");
   const amount = new Uint8Array(16); amount[0] = 1; // 1 yoctoNEAR, paid by the vault
-  log("agent " + (agent + 1).toString() + " bid on auction 0x" + toHex(d.subarray(4, 36)) + " approved by policy");
+  const action = isBid ? "placeBid" : (isJoin ? "joinPool" : "submitPool");
+  log("agent " + (agent + 1).toString() + " " + action + " on auction 0x" + toHex(d.subarray(4, 36)) + " approved by policy");
   const id = promise_create(<u64>acc.length, ptr(acc), <u64>method.length, ptr(method), <u64>args.length, ptr(args), ptr(amount), SIGN_GAS);
   promise_return(id);
 }
@@ -276,8 +333,13 @@ export function get_config(): void {
   const n = sget("n")!;
   const paused = sget("paused");
   const isPaused = paused != null && paused!.length > 0 && paused![0] == 1;
+  let list = "";
+  for (let i = 0; i < <i32>n[0]; i++) {
+    const acc = sget("a" + i.toString())!;
+    list += (i > 0 ? "," : "") + '"' + String.UTF8.decode(acc.buffer) + '"';
+  }
   const json = '{"configured":true,"owner":"' + String.UTF8.decode(owner!.buffer) +
-    '","auction":"0x' + toHex(auction) + '","agents":' + (<i32>n[0]).toString() +
+    '","auction":"0x' + toHex(auction) + '","agents":' + (<i32>n[0]).toString() + ',"agent_accounts":[' + list + ']' +
     ',"max_fee_per_gas_hex":"0x' + toHex(sget("maxfee")!) + '","max_gas_hex":"0x' + toHex(sget("maxgas")!) +
     '","paused":' + (isPaused ? "true" : "false") + ',"mpc":"' + MPC_ACCOUNT + '","path_prefix":"' + PATH_PREFIX + '"}';
   returnBytes(utf8(json));

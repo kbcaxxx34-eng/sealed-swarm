@@ -83,7 +83,8 @@
     "deploy:localhost": "hardhat deploy --network localhost",
     "deploy:sepolia": "hardhat deploy --network sepolia",
     "verify:sepolia": "hardhat verify --network sepolia",
-    "test:all": "hardhat test && cd near-vault && npm install --silent && npm test"
+    "test:all": "hardhat test && cd near-vault && npm install --silent && npm test",
+    "simulate": "hardhat test simulation/market.sim.ts"
   },
   "overrides": {
     "ws@>=7.0.0 <7.5.10": ">=7.5.10",
