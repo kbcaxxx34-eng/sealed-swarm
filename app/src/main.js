@@ -1,4 +1,5 @@
 // SealedSwarm — a NEAR vault runs a swarm of bidding agents on Ethereum; every bid is encrypted with Zama FHE.
+import "@fontsource-variable/schibsted-grotesk";
 import { setupWalletSelector } from "@near-wallet-selector/core";
 import { setupMeteorWallet } from "@near-wallet-selector/meteor-wallet";
 import { actionCreators, createTransaction, encodeTransaction, SignedTransaction, Signature } from "@near-js/transactions";
