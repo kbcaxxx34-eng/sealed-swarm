@@ -3,7 +3,7 @@
 import fs from "node:fs";
 import assert from "node:assert/strict";
 import { keccak256, serializeTransaction, encodeFunctionData, hexToBytes } from "viem";
-import { makeVm, configArgs, Panic } from "../lib/vault-vm.mjs";
+import { makeVm, configArgs, Panic, settlementArgs, budgetArgs, settleArgs } from "../lib/vault-vm.mjs";
 
 const abi = JSON.parse(fs.readFileSync(new URL("../../app/src/contract.json", import.meta.url), "utf8")).abi;
 
@@ -145,6 +145,69 @@ test("rejects malformed transactions", () => {
   expectPanic(() => vm.call("request_sign", { input: good.slice(0, good.length - 5), predecessor: s }), "rlp");
   const legacy = new Uint8Array(good); legacy[0] = 0x01;
   expectPanic(() => vm.call("request_sign", { input: legacy, predecessor: s }), "EIP-1559");
+});
+
+const USDC = "17208628f84f5d6ad33f0da3bbbeb27ffcb398eac501a31bd6ad2011e36133a1";
+function settlementSetup() {
+  const { vm } = setup();
+  vm.call("set_settlement", { input: settlementArgs("intents.near", USDC) });
+  vm.call("allow_seller", { input: new TextEncoder().encode("gpu-seller.near") });
+  vm.call("set_budget", { input: budgetArgs(0, 1_000_000n) }); // atlas: 1 USDC
+  vm.call("request_sign", { input: tx({ auctionId: 4n }), predecessor: acct(0) }); // atlas entered auction 4
+  return vm;
+}
+
+test("settlement: an agent pays an allowed seller through NEAR Intents, within its budget", () => {
+  const vm = settlementSetup();
+  const r = vm.call("settle", { input: settleArgs(4n, 250_000n, "gpu-seller.near"), predecessor: acct(0) });
+  const [transfer, then] = r.promises;
+  assert.equal(transfer.account, "intents.near");
+  assert.equal(transfer.method, "mt_transfer");
+  assert.equal(transfer.amount, 1n);
+  const args = JSON.parse(transfer.args);
+  assert.equal(args.receiver_id, "gpu-seller.near");
+  assert.equal(args.token_id, "nep141:" + USDC);
+  assert.equal(args.amount, "250000");
+  assert.ok(args.memo.includes("agent 1"));
+  assert.equal(then.kind, "then");
+  assert.equal(then.account, VAULT);
+  assert.equal(then.method, "on_settled");
+  assert.equal(vm.call("get_budget", { input: new Uint8Array([0]) }).ret, "750000");
+  assert.equal(JSON.parse(vm.call("get_config").ret).settlement_token, USDC);
+});
+
+test("settlement: refuses unknown sellers, other auctions, double payment, over-budget and non-agents", () => {
+  const vm = settlementSetup();
+  expectPanic(() => vm.call("settle", { input: settleArgs(4n, 1n, "attacker.near"), predecessor: acct(0) }), "allowlist");
+  expectPanic(() => vm.call("settle", { input: settleArgs(5n, 1n, "gpu-seller.near"), predecessor: acct(0) }), "did not enter");
+  expectPanic(() => vm.call("settle", { input: settleArgs(4n, 1_000_001n, "gpu-seller.near"), predecessor: acct(0) }), "exceeds");
+  expectPanic(() => vm.call("settle", { input: settleArgs(4n, 0n, "gpu-seller.near"), predecessor: acct(0) }), "positive");
+  expectPanic(() => vm.call("settle", { input: settleArgs(4n, 5n, "gpu-seller.near"), predecessor: "owner.testnet" }), "not one of this vault's agents");
+  vm.call("settle", { input: settleArgs(4n, 5n, "gpu-seller.near"), predecessor: acct(0) });
+  expectPanic(() => vm.call("settle", { input: settleArgs(4n, 5n, "gpu-seller.near"), predecessor: acct(0) }), "already paid");
+  expectPanic(() => vm.call("set_budget", { input: budgetArgs(0, 9n), predecessor: acct(0) }), "only the owner");
+  expectPanic(() => vm.call("allow_seller", { input: new TextEncoder().encode("attacker.near"), predecessor: acct(0) }), "only the owner");
+});
+
+test("settlement: a failed transfer restores the budget and allows a retry; the callback is private", () => {
+  const vm = settlementSetup();
+  vm.call("settle", { input: settleArgs(4n, 400_000n, "gpu-seller.near"), predecessor: acct(0) });
+  const cb = new Uint8Array([0, ...settleArgs(4n, 400_000n, "x").slice(0, 48)]);
+  expectPanic(() => vm.call("on_settled", { input: cb, predecessor: acct(0), results: [2] }), "private callback");
+  const r = vm.call("on_settled", { input: cb, predecessor: VAULT, results: [2] });
+  assert.equal(r.ret, "false");
+  assert.equal(vm.call("get_budget", { input: new Uint8Array([0]) }).ret, "1000000");
+  vm.call("settle", { input: settleArgs(4n, 400_000n, "gpu-seller.near"), predecessor: acct(0) }); // retry works
+  assert.equal(vm.call("on_settled", { input: cb, predecessor: VAULT, results: [1] }).ret, "true");
+  assert.equal(vm.call("get_budget", { input: new Uint8Array([0]) }).ret, "600000");
+});
+
+test("owner can point the vault at the mainnet MPC signer", () => {
+  const { vm } = setup();
+  vm.call("set_mpc", { input: new TextEncoder().encode("v1.signer") });
+  const r = vm.call("request_sign", { input: tx(), predecessor: acct(0) });
+  assert.equal(r.promises[0].account, "v1.signer");
+  expectPanic(() => vm.call("set_mpc", { input: new TextEncoder().encode("evil.near"), predecessor: acct(0) }), "only the owner");
 });
 
 console.log(`\n  ${passed} passing`);

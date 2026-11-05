@@ -38,9 +38,21 @@ These are the rules the code enforces. Contract: [`contracts/SealedSwarmAuction.
 4. If any check fails, the vault panics and nothing is signed. If all pass, the vault calls `v1.signer-prod.testnet` (`sign`, path of that agent) and returns the signature.
 5. Only the owner can pause or resume the vault. The policy is set once, at creation.
 
+## Settlement through NEAR Intents (mainnet)
+
+1. The owner configures the vault with the NEAR Intents verifier (`intents.near`) and a token (wNEAR in the live app, USDC in the simulation), allowlists sellers, and sets a spending limit per agent (`set_budget`).
+2. The owner deposits tokens into NEAR Intents on behalf of the vault (`ft_transfer_call` to `intents.near` with `msg = vault`).
+3. After the reveal, a winning agent calls `settle(auction, amount, seller)`. A pool member settles only its own share (`price × own contribution / pool total`). The vault pays only if:
+   - the caller is one of its agents and the vault is not paused;
+   - the seller is on the owner's allowlist;
+   - the agent entered that auction and has not paid for it yet;
+   - the amount is positive and within the agent's remaining spending limit.
+4. The vault then calls `mt_transfer` on `intents.near` (1 yoctoNEAR attached) to move the amount from its Intents balance to the seller, with a memo naming the auction and the agent. If the transfer fails, a private callback restores the budget and allows a retry.
+5. The vault cannot read Sepolia, so the payment amount comes from the agent. The allowlist, the one-payment-per-auction rule and the spending limit bound what a lying or compromised agent can pay.
+
 ## What a compromised agent can do
 
-At most: enter each auction once on the approved contract, with a bid it chose, paying gas within the caps. It cannot send ETH, call any other contract or function, bid twice, or move the NEAR in its account.
+At most: enter each auction once on the approved contract, with a bid it chose, paying gas within the caps; and pay an allowlisted seller once per auction it entered, within its spending limit. It cannot send ETH, call any other contract or function, bid twice, pay anyone else, or move the NEAR in its account.
 
 ## One round, step by step
 

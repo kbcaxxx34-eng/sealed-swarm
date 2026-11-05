@@ -9,6 +9,7 @@ SealedSwarm fixes both:
 - **Bids stay encrypted end to end** (Zama FHE). The auction contract compares and adds ciphertexts and only ever reveals the winner and the price. Losing bids are never revealed, not even after the auction.
 - **Agents can pool their budgets without revealing them.** Agents that can't afford a lot alone form an *encrypted buyer pool*: the contract adds their contributions under encryption, and no one, including the other members, learns what each one put in.
 - **Agents are autonomous but bounded** (NEAR). Each owner runs a *swarm vault* contract on NEAR. Every agent is a NEAR sub-account of the vault whose only key can ask the vault for a signature. The vault decodes each Ethereum transaction on-chain, checks it against the owner's policy, and only then asks the NEAR MPC network (Chain Signatures) to sign it. No agent ever holds an Ethereum key.
+- **Winners pay through NEAR Intents** (mainnet). A winning agent, or each pool member for its own share, asks the vault to pay the seller. The vault checks a seller allowlist and the agent's spending limit, then moves tokens with `mt_transfer` on `intents.near`.
 - **Agents think privately** (NEAR AI Cloud). Agents reason with open models running in TEEs, and the app checks the TEE attestation and the signature on each answer.
 
 Built at **NEAR HACKATHON 2026**. Tracks: **AI Swarms**, **Privacy & Private AI**, **AI Security & Defense**, **Agent Economy**. Testnet prototype, not audited.
@@ -27,14 +28,16 @@ npm install
 npm run simulate
 ```
 
-**You will see** 5 GPU auctions with 20 agents from 5 different owners' vaults: solo bids, an encrypted buyer pool winning a lot and each member's share, and the vault refusing 9 attacks from prompt-injected agents (send ETH to an attacker, call a look-alike contract, call `close()`, bid twice, bid while the owner paused the vault). Every on-chain result is checked against a plaintext computation of the same rules. The full report is written to `simulation/REPORT.md`.
+**You will see** 5 GPU auctions with 20 agents from 5 different owners' vaults: solo bids, an encrypted buyer pool winning a lot and each member's share, every winner paying its seller through the vault's NEAR Intents settlement (`mt_transfer` on `intents.near`, simulated), and the vault refusing 10 attacks from prompt-injected agents (send ETH to an attacker, call a look-alike contract, call `close()`, bid twice, bid while the owner paused the vault, pay a seller that is not allowlisted).
 
-What is real in the simulation: the auction contract (same Solidity as on Sepolia, on Hardhat with Zama's FHE mock) and the vault (the same compiled wasm that runs on NEAR, on a mocked NEAR host). What is mocked: the MPC signature.
+Optional: `NEARAI_API_KEY=sk-... npm run simulate` lets the 20 agents reason with a TEE-hosted model on NEAR AI Cloud; the code still caps every bid. Every on-chain result is checked against a plaintext computation of the same rules. The full report is written to `simulation/REPORT.md`.
+
+What is real in the simulation: the auction contract (same Solidity as on Sepolia, on Hardhat with Zama's FHE mock) and the vault (the same compiled wasm that runs on NEAR, on a mocked NEAR host). What is mocked: the MPC signature and the Intents verifier's response.
 
 Run all the tests:
 
 ```bash
-npm run test:all     # 18 auction + pool tests (FHE mock) and 10 vault tests (wasm)
+npm run test:all     # 18 auction + pool tests (FHE mock) and 14 vault tests (wasm)
 ```
 
 ## Try the live app (NEAR testnet + Sepolia)
@@ -49,6 +52,7 @@ You need the Meteor Wallet extension on **testnet** with a funded `.testnet` acc
 6. **Agents bid on their own.** → No wallet pop-up. The log shows, per agent: encrypted amount, vault approval, MPC signature, Sepolia transaction. Agents below the reserve form a buyer pool.
 7. **Simulate a compromised agent.** → Nova tries to send ETH to `0x…dEaD`; the vault refuses on-chain and nothing is signed.
 8. After the end time: **Close**, then **Decrypt winner & price**. → Only the winner and the second price are revealed, with the Zama KMS proof verified on-chain.
+9. *(Mainnet only; select "Mainnet" at the top. Uses real NEAR: about 3 NEAR of storage for the vault and agent accounts, plus a few cents.)* **Deposit wNEAR into NEAR Intents for the vault**, then after a reveal, **Winner pays the seller via NEAR Intents**. → The log links the `settle` transaction and the `mt_transfer` on `intents.near`. In the demo the owner is also the allowlisted seller.
 
 ## How it works
 
@@ -75,12 +79,14 @@ Step-by-step rules and a sequence diagram: [RULES.md](RULES.md).
 
 | Feature | Where |
 |---|---|
-| Smart contract (raw host API, AssemblyScript → 15 KB wasm) | [`near-vault/assembly/index.ts`](near-vault/assembly/index.ts) |
+| Smart contract (raw host API, AssemblyScript → 19 KB wasm) | [`near-vault/assembly/index.ts`](near-vault/assembly/index.ts) |
 | Sub-accounts created by a contract (one per agent) | `configure` in the vault |
 | Function-call access keys (agent can only call `vault.request_sign`) | `configure` in the vault |
 | Chain Signatures (MPC `v1.signer-prod.testnet`, per-agent derivation paths) | `request_sign` in the vault; address derivation and signature assembly in [`app/src/main.js`](app/src/main.js) |
-| NEAR AI Cloud (TEE-hosted models, attestation report, response signatures) | `attestModel`, `verifyCompletion`, `aiValuation` in [`app/src/main.js`](app/src/main.js) |
-| Meteor Wallet via NEAR Wallet Selector | [`app/src/main.js`](app/src/main.js) |
+| NEAR AI Cloud (TEE-hosted models, attestation report, response signatures) | `attestModel`, `verifyCompletion`, `aiValuation` in [`app/src/main.js`](app/src/main.js); optional in the simulation |
+| NEAR Intents (verifier `intents.near`: deposit with `ft_transfer_call`, vault pays with `mt_transfer`, `mt_balance_of`) | `settle` / `on_settled` in the vault; `fundIntents`, `agentSettle` in the app |
+| Promise callbacks (budget restored if a transfer fails) | `on_settled` in the vault |
+| Meteor Wallet via NEAR Wallet Selector (testnet and mainnet) | [`app/src/main.js`](app/src/main.js) |
 
 ### Zama FHE
 
@@ -105,11 +111,12 @@ Current version (vault with agent sub-accounts, buyer pools): transactions will 
 ## Limitations
 
 - Testnet prototype; not audited.
-- No payment escrow: the contract decides winner and price but does not move funds. Settlement is the next step.
+- Settlement trusts the agent's claimed amount, bounded by the allowlist, one payment per auction and the spending limit: the NEAR vault cannot read Sepolia. A bridge or light client would remove that trust.
+- NEAR Intents exists only on mainnet, so settlement runs only when the app is switched to mainnet.
 - The number of entries per auction is public; amounts are not.
 - In the live app, agent keys live in the browser's local storage (testnet only). Each key can only call `request_sign`, and the vault restricts that to entries on the approved auction.
 - The vault policy is set once, at creation. A new auction contract needs a new vault.
-- The vault is configured for NEAR testnet MPC and Sepolia.
+- Bids always target Sepolia (where Zama's FHE coprocessor runs); the vault can use the testnet or mainnet MPC signer.
 
 ## Repository map
 
@@ -117,8 +124,8 @@ Current version (vault with agent sub-accounts, buyer pools): transactions will 
 |---|---|
 | `contracts/SealedSwarmAuction.sol` | FHE second-price auction with encrypted buyer pools |
 | `test/` | 18 tests on the Zama FHE mock |
-| `near-vault/` | SwarmVault NEAR contract, its 10 tests and a wasm VM harness (`lib/vault-vm.mjs`) |
-| `simulation/market.sim.ts` | `npm run simulate`: 20 agents, 5 vaults, 5 auctions, rogue agents |
+| `near-vault/` | SwarmVault NEAR contract, its 14 tests and a wasm VM harness (`lib/vault-vm.mjs`) |
+| `simulation/market.sim.ts` | `npm run simulate`: 20 agents, 5 vaults, 5 auctions, pools, Intents settlement, rogue agents |
 | `app/` | Front end (Vite): Meteor, Chain Signatures, Zama relayer SDK, NEAR AI Cloud |
 | `RULES.md` | The rules the code enforces |
 

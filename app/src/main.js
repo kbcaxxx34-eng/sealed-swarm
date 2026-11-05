@@ -17,7 +17,19 @@ import artifact from "./contract.json";
 
 // ------------------------------------------------------------------ config
 const DEFAULT_CONTRACT = ""; // v2 (buyer pools): set after the Sepolia deployment
-const MPC_CONTRACT = "v1.signer-prod.testnet";
+// NEAR network: testnet by default; mainnet adds settlement through NEAR Intents (mainnet only).
+// Bids always go to Sepolia (Zama FHE); only the NEAR side changes.
+const NET = (() => { try { return localStorage.getItem("ssNet") === "mainnet" ? "mainnet" : "testnet"; } catch (_) { return "testnet"; } })();
+const NETS = {
+  testnet: { mpc: "v1.signer-prod.testnet", rpcs: ["https://rpc.testnet.near.org", "https://test.rpc.fastnear.com"], suffix: ".testnet", explorer: "https://testnet.nearblocks.io" },
+  mainnet: { mpc: "v1.signer", rpcs: ["https://free.rpc.fastnear.com", "https://rpc.mainnet.near.org"], suffix: ".near", explorer: "https://nearblocks.io" },
+};
+const MPC_CONTRACT = NETS[NET].mpc;
+// settlement through NEAR Intents (mainnet): the vault pays sellers in wNEAR from its Intents balance
+const INTENTS = "intents.near";
+const SETTLE_TOKEN = "wrap.near";
+const UNIT_YOCTO = 100000000000000000000n; // 1 auction unit = 0.0001 wNEAR
+const AGENT_BUDGET_UNITS = 300n; // spending limit per agent (0.03 wNEAR)
 const SEPOLIA_RPC = "https://ethereum-sepolia-rpc.publicnode.com";
 const AGENT_CALL_GAS = 300000000000000n; // 300 Tgas for request_sign (the vault forwards 250 Tgas to the MPC)
 const TGAS = 1000000000000n;
@@ -55,13 +67,10 @@ function busy(btn, on, label) {
 
 // ------------------------------------------------------------------ clients & state
 const publicClient = createPublicClient({ chain: sepolia, transport: http(SEPOLIA_RPC) });
-const mpc = new contracts.ChainSignatureContract({ networkId: "testnet", contractId: MPC_CONTRACT });
+const mpc = new contracts.ChainSignatureContract({ networkId: NET, contractId: MPC_CONTRACT });
 const evm = new chainAdapters.evm.EVM({ publicClient, contract: mpc });
 const abi = artifact.abi;
-const nearRpc = new FailoverRpcProvider([
-  new JsonRpcProvider({ url: "https://rpc.testnet.near.org" }),
-  new JsonRpcProvider({ url: "https://test.rpc.fastnear.com" }),
-]);
+const nearRpc = new FailoverRpcProvider(NETS[NET].rpcs.map((url) => new JsonRpcProvider({ url })));
 
 const state = {
   selector: null, wallet: null, accountId: null,
@@ -95,7 +104,7 @@ const read = (functionName, args = []) =>
 
 // ------------------------------------------------------------------ 1. NEAR
 async function initNear() {
-  state.selector = await setupWalletSelector({ network: "testnet", modules: [setupMeteorWallet()] });
+  state.selector = await setupWalletSelector({ network: NET, modules: [setupMeteorWallet()] });
   if (state.selector.isSignedIn()) {
     state.wallet = await state.selector.wallet();
     const accs = await state.wallet.getAccounts();
@@ -121,7 +130,7 @@ async function onNear(id) {
   $("btnNear").hidden = true;
   $("btnNearOut").hidden = false;
   $("vaultId").textContent = state.vaultId;
-  if (!id.endsWith(".testnet")) log(`${id} does not look like a testnet account — switch Meteor to Testnet.`, "warn");
+  if (!id.endsWith(NETS[NET].suffix)) log(`${id} does not look like a ${NET} account — switch Meteor to ${NET}.`, "warn");
   log(`NEAR account connected: ${id}`, "ok");
   loadAgentKeys();
   for (const a of state.agents) {
@@ -130,6 +139,7 @@ async function onNear(id) {
   }
   log("Agents derived from the vault: " + state.agents.map((a) => `${a.name} ${short(a.address)}`).join(", "), "ok");
   await refreshVault();
+  await refreshIntentsBalance();
   await refreshBalances();
   updateUi();
 }
@@ -181,6 +191,99 @@ function vaultConfigBytes() {
   return new Uint8Array([...auction, fee.length, ...fee, gas.length, ...gas, state.agentKeys.length, ...agents]);
 }
 
+const enc8 = (t) => new TextEncoder().encode(t);
+const u128le = (v) => { const b = new Uint8Array(16); let x = BigInt(v); for (let i = 0; i < 16; i++) { b[i] = Number(x & 255n); x >>= 8n; } return b; };
+
+// mainnet only: MPC signer, settlement token, the owner as allowed seller, per-agent spending limits
+function settlementSetupActions() {
+  if (NET !== "mainnet") return [];
+  const fc = (m, a) => actionCreators.functionCall(m, a, 10n * TGAS, 0n);
+  return [
+    fc("set_mpc", enc8(MPC_CONTRACT)),
+    fc("set_settlement", new Uint8Array([INTENTS.length, ...enc8(INTENTS), SETTLE_TOKEN.length, ...enc8(SETTLE_TOKEN)])),
+    fc("allow_seller", enc8(state.accountId)),
+    ...state.agents.map((_, i) => fc("set_budget", new Uint8Array([i, ...u128le(AGENT_BUDGET_UNITS * UNIT_YOCTO)]))),
+  ];
+}
+
+// Owner deposits wNEAR into NEAR Intents on behalf of the vault (one approval):
+// register on wrap.near if needed, wrap NEAR, then ft_transfer_call to intents.near with msg = vault.
+async function fundIntents() {
+  const btn = $("btnFundIntents");
+  const amount = BigInt(state.agents.length) * AGENT_BUDGET_UNITS * UNIT_YOCTO;
+  busy(btn, true, "Approve in Meteor…");
+  try {
+    await state.wallet.signAndSendTransaction({
+      receiverId: SETTLE_TOKEN,
+      actions: [
+        actionCreators.functionCall("storage_deposit", enc8(JSON.stringify({ account_id: state.accountId, registration_only: true })), 30n * TGAS, 1250000000000000000000n),
+        actionCreators.functionCall("near_deposit", enc8("{}"), 10n * TGAS, amount),
+        actionCreators.functionCall("ft_transfer_call", enc8(JSON.stringify({ receiver_id: INTENTS, amount: amount.toString(), msg: state.vaultId })), 100n * TGAS, 1n),
+      ],
+    });
+    log(`Deposited ${Number(amount) / 1e24} wNEAR into NEAR Intents for ${state.vaultId}.`, "ok");
+    await refreshIntentsBalance();
+  } catch (e) { log("Intents deposit failed: " + errMsg(e), "err"); }
+  busy(btn, false); updateUi();
+}
+
+async function refreshIntentsBalance() {
+  if (NET !== "mainnet" || !state.vaultId) return;
+  try {
+    const res = await nearRpc.query({ request_type: "call_function", finality: "optimistic", account_id: INTENTS, method_name: "mt_balance_of",
+      args_base64: btoa(JSON.stringify({ account_id: state.vaultId, token_id: `nep141:${SETTLE_TOKEN}` })) });
+    const bal = JSON.parse(new TextDecoder().decode(new Uint8Array(res.result)));
+    $("intentsBal").textContent = `${Number(BigInt(bal)) / 1e24} wNEAR`;
+  } catch (_) { $("intentsBal").textContent = "—"; }
+}
+
+// An agent (or each pool member, for its share) asks the vault to pay the seller via NEAR Intents.
+async function agentSettle(idx, auctionId, units, seller) {
+  const kp = state.agentKeys[idx];
+  const pub = kp.getPublicKey();
+  const account = agentAccount(idx);
+  const id = new Uint8Array(32); let x = BigInt(auctionId); for (let i = 31; i >= 0; i--) { id[i] = Number(x & 255n); x >>= 8n; }
+  const args = new Uint8Array([...id, ...u128le(BigInt(units) * UNIT_YOCTO), seller.length, ...enc8(seller)]);
+  const ak = await nearRpc.query({ request_type: "view_access_key", finality: "final", account_id: account, public_key: pub.toString() });
+  const block = await nearRpc.block({ finality: "final" });
+  const tx = createTransaction(account, pub, state.vaultId, BigInt(ak.nonce) + 1n,
+    [actionCreators.functionCall("settle", args, 100n * TGAS, 0n)], baseDecode(block.header.hash));
+  const hash = new Uint8Array(await crypto.subtle.digest("SHA-256", encodeTransaction(tx)));
+  const signed = new SignedTransaction({ transaction: tx, signature: new Signature({ keyType: pub.keyType, data: kp.sign(hash).signature }) });
+  const outcome = await nearRpc.sendTransactionUntil(signed, "FINAL");
+  const failure = nearFailure(outcome);
+  return { ok: !failure, reason: failure, nearTx: outcome?.transaction?.hash };
+}
+
+async function settleAuction() {
+  const btn = $("btnSettle");
+  busy(btn, true, "Paying…");
+  try {
+    const a = state.auctions.find((x) => x.id === state.selected);
+    if (!a?.revealed) throw new Error("Reveal the result first.");
+    const seller = state.accountId; // demo: the owner is also the seller (allowlisted at vault creation)
+    let payers = [];
+    const solo = state.agents.findIndex((x) => x.address?.toLowerCase() === a.winner.toLowerCase());
+    if (solo >= 0) payers = [{ idx: solo, units: BigInt(a.price) }];
+    else {
+      const key = Object.keys(state.poolAddr || {}).find((k) => k.startsWith(a.id + ":") && state.poolAddr[k].toLowerCase() === a.winner.toLowerCase());
+      const members = key ? state.pools[key] : null;
+      if (!members) throw new Error("The winner is not one of your agents.");
+      const total = members.reduce((s, m) => s + m.amount, 0);
+      payers = members.map((m) => ({ idx: state.agents.findIndex((x) => x.name === m.name), units: (BigInt(a.price) * BigInt(m.amount)) / BigInt(total) }));
+    }
+    for (const p of payers) {
+      const r = await agentSettle(p.idx, a.id, p.units, seller);
+      const name = state.agents[p.idx].name;
+      if (!r.ok) { log(`${name}: vault refused payment — ${r.reason}`, "err"); continue; }
+      log(`${name} paid ${Number(p.units * UNIT_YOCTO) / 1e24} wNEAR to ${seller} through NEAR Intents (${NETS[NET].explorer}/txns/${r.nearTx}).`, "ok");
+    }
+    $("settleResult").innerHTML = `<span class="ok">Settled through NEAR Intents. See the log for the transactions.</span>`;
+    await refreshIntentsBalance();
+  } catch (e) { log("Settlement failed: " + errMsg(e), "err"); $("settleResult").innerHTML = `<span class="err">${errMsg(e)}</span>`; }
+  busy(btn, false); updateUi();
+}
+
 async function createVault() {
   const btn = $("btnVault");
   busy(btn, true, "Approve in Meteor…");
@@ -194,6 +297,7 @@ async function createVault() {
         actionCreators.transfer(VAULT_DEPOSIT),
         actionCreators.deployContract(wasm),
         actionCreators.functionCall("configure", vaultConfigBytes(), 100n * TGAS, 0n),
+        ...settlementSetupActions(),
       ],
     });
     log("Vault created and agent sub-accounts registered.", "ok");
@@ -704,6 +808,9 @@ function updateUi() {
   $("btnVault").disabled = !(state.wallet && state.accountId && state.contract) || vaultReady;
   $("btnPause").disabled = !vaultReady;
   $("btnRogue").disabled = !(vaultReady && haveSwarm);
+  $("btnFundIntents").disabled = !(vaultReady && NET === "mainnet");
+  const selA = state.auctions.find((x) => x.id === state.selected);
+  $("btnSettle").disabled = !(NET === "mainnet" && vaultReady && selA?.revealed && selA.winner !== "0x0000000000000000000000000000000000000000");
   $("btnFund").disabled = !haveSwarm;
   $("btnRefresh").disabled = !haveSwarm;
   $("btnCreate").disabled = !state.contract;
@@ -719,6 +826,11 @@ $("btnFund").addEventListener("click", fundAgents);
 $("btnVault").addEventListener("click", createVault);
 $("btnPause").addEventListener("click", togglePause);
 $("btnRogue").addEventListener("click", simulateRogue);
+$("btnFundIntents").addEventListener("click", fundIntents);
+$("btnSettle").addEventListener("click", settleAuction);
+$("netSel").value = NET;
+$("netSel").addEventListener("change", (e) => { try { localStorage.setItem("ssNet", e.target.value); } catch (_) {} location.reload(); });
+if (NET === "mainnet") document.querySelectorAll(".mainnet-only").forEach((el) => (el.hidden = false));
 $("btnRefresh").addEventListener("click", refreshBalances);
 $("btnDeploy").addEventListener("click", deployContract);
 $("btnCreate").addEventListener("click", createAuction);

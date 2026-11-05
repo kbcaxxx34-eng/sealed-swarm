@@ -14,7 +14,7 @@ const u128le = (b) => { let v = 0n; for (let i = 15; i >= 0; i--) v = (v << 8n) 
 export function makeVm({ accountId = "vault.owner.testnet", wasm = VAULT_WASM } = {}) {
   const module = new WebAssembly.Module(wasm);
   const storage = new Map();
-  const ctx = { input: new Uint8Array(), predecessor: "", logs: [], ret: null, promises: [] };
+  const ctx = { input: new Uint8Array(), predecessor: "", logs: [], ret: null, promises: [], results: [] };
   const regs = new Map();
   let mem;
   const u8 = () => new Uint8Array(mem.buffer);
@@ -37,6 +37,13 @@ export function makeVm({ accountId = "vault.owner.testnet", wasm = VAULT_WASM } 
       return BigInt(ctx.promises.length - 1);
     },
     promise_return: () => {},
+    promise_then: (pi, al, ap, ml, mp, gl, gp, amp, gas) => {
+      ctx.promises.push({ kind: "then", after: Number(pi), account: dec(read(al, ap)), method: dec(read(ml, mp)), args: read(gl, gp), amount: u128le(read(16, amp)), gas });
+      return BigInt(ctx.promises.length - 1);
+    },
+    promise_results_count: () => BigInt(ctx.results.length),
+    promise_result: (i) => BigInt(ctx.results[Number(i)] ?? 0),
+    storage_remove: (kl, kp, r) => { const k = key(read(kl, kp)); const had = storage.has(k); if (had) { regs.set(r, storage.get(k)); storage.delete(k); } return had ? 1n : 0n; },
     promise_batch_create: (al, ap) => { ctx.promises.push({ kind: "batch", account: dec(read(al, ap)), actions: [] }); return BigInt(ctx.promises.length - 1); },
     promise_batch_action_create_account: (i) => ctx.promises[Number(i)].actions.push({ type: "CreateAccount" }),
     promise_batch_action_transfer: (i, ap) => ctx.promises[Number(i)].actions.push({ type: "Transfer", amount: u128le(read(16, ap)) }),
@@ -44,10 +51,11 @@ export function makeVm({ accountId = "vault.owner.testnet", wasm = VAULT_WASM } 
       type: "AddKey", publicKey: read(kl, kp), nonce, allowance: u128le(read(16, alp)), receiver: dec(read(rl, rp)), methods: dec(read(ml, mp)),
     }),
   };
-  function call(method, { input = new Uint8Array(), predecessor = "owner.testnet" } = {}) {
+  // results: outcomes of the promises a callback waits on (1 = success, 2 = failure)
+  function call(method, { input = new Uint8Array(), predecessor = "owner.testnet", results = [] } = {}) {
     const inst = new WebAssembly.Instance(module, { env });
     mem = inst.exports.memory;
-    Object.assign(ctx, { input, predecessor, logs: [], ret: null, promises: [] });
+    Object.assign(ctx, { input, predecessor, logs: [], ret: null, promises: [], results });
     inst.exports[method]();
     return { ret: ctx.ret ? dec(ctx.ret) : null, logs: ctx.logs, promises: ctx.promises };
   }
@@ -64,4 +72,13 @@ export function configArgs({ auction, maxFee = 50_000_000_000n, maxGas = 3_000_0
     out.push(name.length, ...name, ...a.publicKey);
   }
   return new Uint8Array(out);
+}
+
+const enc = (t) => new TextEncoder().encode(t);
+export const u128 = (v) => { const b = new Uint8Array(16); let x = BigInt(v); for (let i = 0; i < 16; i++) { b[i] = Number(x & 255n); x >>= 8n; } return b; };
+export const settlementArgs = (intents, token) => new Uint8Array([enc(intents).length, ...enc(intents), enc(token).length, ...enc(token)]);
+export const budgetArgs = (agentIndex, amount) => new Uint8Array([agentIndex, ...u128(amount)]);
+export function settleArgs(auctionId, amount, seller) {
+  const id = new Uint8Array(32); let x = BigInt(auctionId); for (let i = 31; i >= 0; i--) { id[i] = Number(x & 255n); x >>= 8n; }
+  return new Uint8Array([...id, ...u128(amount), enc(seller).length, ...enc(seller)]);
 }

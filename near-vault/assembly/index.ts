@@ -17,6 +17,13 @@
 //   - each agent enters each auction at most once (one bid, or one pool contribution);
 //     submitPool is allowed only for an agent that already joined a pool in that auction
 //
+// Settlement through NEAR Intents (optional, mainnet: intents.near has no testnet):
+//   an agent that won (alone or in a pool) asks the vault to pay the seller its share. The vault
+//   moves its own balance inside the NEAR Intents verifier with mt_transfer, only if the seller is
+//   on the owner's allowlist, the agent entered that auction, has not paid it yet, and the amount
+//   fits the agent's remaining budget (a spending limit set by the owner). A failed transfer
+//   restores the budget in a callback.
+//
 // Written against the raw NEAR host API (no SDK) and compiled with AssemblyScript.
 
 // ------------------------------------------------------------------ NEAR host functions
@@ -27,19 +34,25 @@
 @external("env", "panic_utf8") declare function panic_utf8(len: u64, ptr: u64): void;
 @external("env", "log_utf8") declare function log_utf8(len: u64, ptr: u64): void;
 @external("env", "storage_write") declare function storage_write(key_len: u64, key_ptr: u64, value_len: u64, value_ptr: u64, register_id: u64): u64;
+@external("env", "storage_remove") declare function storage_remove(key_len: u64, key_ptr: u64, register_id: u64): u64;
 @external("env", "storage_read") declare function storage_read(key_len: u64, key_ptr: u64, register_id: u64): u64;
 @external("env", "predecessor_account_id") declare function predecessor_account_id(register_id: u64): void;
 @external("env", "keccak256") declare function keccak256(value_len: u64, value_ptr: u64, register_id: u64): void;
 @external("env", "promise_create") declare function promise_create(account_id_len: u64, account_id_ptr: u64, method_name_len: u64, method_name_ptr: u64, arguments_len: u64, arguments_ptr: u64, amount_ptr: u64, gas: u64): u64;
 @external("env", "promise_return") declare function promise_return(promise_idx: u64): void;
 @external("env", "current_account_id") declare function current_account_id(register_id: u64): void;
+@external("env", "promise_then") declare function promise_then(promise_index: u64, account_id_len: u64, account_id_ptr: u64, method_name_len: u64, method_name_ptr: u64, arguments_len: u64, arguments_ptr: u64, amount_ptr: u64, gas: u64): u64;
+@external("env", "promise_result") declare function promise_result(result_idx: u64, register_id: u64): u64;
+@external("env", "promise_results_count") declare function promise_results_count(): u64;
 @external("env", "promise_batch_create") declare function promise_batch_create(account_id_len: u64, account_id_ptr: u64): u64;
 @external("env", "promise_batch_action_create_account") declare function promise_batch_action_create_account(promise_index: u64): void;
 @external("env", "promise_batch_action_transfer") declare function promise_batch_action_transfer(promise_index: u64, amount_ptr: u64): void;
 @external("env", "promise_batch_action_add_key_with_function_call") declare function promise_batch_action_add_key_with_function_call(promise_index: u64, public_key_len: u64, public_key_ptr: u64, nonce: u64, allowance_ptr: u64, receiver_id_len: u64, receiver_id_ptr: u64, method_names_len: u64, method_names_ptr: u64): void;
 
 const REG: u64 = 0;
-const MPC_ACCOUNT = "v1.signer-prod.testnet";
+const DEFAULT_MPC = "v1.signer-prod.testnet"; // owner can switch to "v1.signer" on mainnet (set_mpc)
+const SETTLE_GAS: u64 = 30_000_000_000_000; // mt_transfer on the Intents verifier
+const CALLBACK_GAS: u64 = 10_000_000_000_000;
 const SIGN_GAS: u64 = 250_000_000_000_000; // 250 Tgas for the MPC sign call
 const PATH_PREFIX = "sealedswarm-agent-";
 const SEPOLIA_CHAIN_ID: StaticArray<u8> = [0xaa, 0x36, 0xa7]; // 11155111
@@ -89,6 +102,8 @@ function sget(key: string): Uint8Array | null {
 function sgetBytesKey(k: Uint8Array): bool {
   return storage_read(<u64>k.length, ptr(k), REG) == 1;
 }
+
+function storage_remove_key(k: Uint8Array): void { storage_remove(<u64>k.length, ptr(k), REG); }
 
 function sset(key: string, value: Uint8Array): void {
   const k = utf8(key);
@@ -320,7 +335,7 @@ export function request_sign(): void {
   const payload = readRegister();
   const path = PATH_PREFIX + (agent + 1).toString();
   const args = utf8('{"request":{"payload_v2":{"Ecdsa":"' + toHex(payload) + '"},"path":"' + path + '","domain_id":0}}');
-  const acc = utf8(MPC_ACCOUNT);
+  const acc = mpcAccount();
   const method = utf8("sign");
   const amount = new Uint8Array(16); amount[0] = 1; // 1 yoctoNEAR, paid by the vault
   const action = isBid ? "placeBid" : (isJoin ? "joinPool" : "submitPool");
@@ -345,8 +360,203 @@ export function get_config(): void {
   const json = '{"configured":true,"owner":"' + String.UTF8.decode(owner!.buffer) +
     '","auction":"0x' + toHex(auction) + '","agents":' + (<i32>n[0]).toString() + ',"agent_accounts":[' + list + ']' +
     ',"max_fee_per_gas_hex":"0x' + toHex(sget("maxfee")!) + '","max_gas_hex":"0x' + toHex(sget("maxgas")!) +
-    '","paused":' + (isPaused ? "true" : "false") + ',"mpc":"' + MPC_ACCOUNT + '","path_prefix":"' + PATH_PREFIX + '"}';
+    '","paused":' + (isPaused ? "true" : "false") + ',"mpc":"' + String.UTF8.decode(mpcAccount().buffer) +
+    '","path_prefix":"' + PATH_PREFIX + '","intents":"' + strOr("intents") + '","settlement_token":"' + strOr("token") + '"}';
   returnBytes(utf8(json));
+}
+
+// ------------------------------------------------------------------ owner settings
+
+function strOr(key: string): string {
+  const v = sget(key);
+  return v == null ? "" : String.UTF8.decode(v!.buffer);
+}
+
+function mpcAccount(): Uint8Array {
+  const v = sget("mpc");
+  return v == null ? utf8(DEFAULT_MPC) : v!;
+}
+
+/// set_mpc(args: utf8 account id): MPC signer contract, e.g. "v1.signer" on mainnet. Owner only.
+export function set_mpc(): void {
+  ownerOrFail();
+  const a = readInput();
+  if (a.length < 2 || a.length > 64) { fail("bad account"); return; }
+  sset("mpc", a);
+}
+
+/// set_settlement(args: [1 len][intents verifier account][1 len][token contract]). Owner only.
+export function set_settlement(): void {
+  ownerOrFail();
+  const a = readInput();
+  if (a.length < 2) { fail("bad args"); return; }
+  const il = <i32>a[0];
+  if (1 + il + 1 > a.length) { fail("bad args"); return; }
+  const tl = <i32>a[1 + il];
+  if (2 + il + tl != a.length || il < 2 || tl < 2) { fail("bad args"); return; }
+  sset("intents", a.slice(1, 1 + il));
+  sset("token", a.slice(2 + il, 2 + il + tl));
+  log("settlement: " + strOr("token") + " via " + strOr("intents"));
+}
+
+/// allow_seller(args: utf8 account id): add a seller the agents may pay. Owner only.
+export function allow_seller(): void {
+  ownerOrFail();
+  const a = readInput();
+  if (a.length < 2 || a.length > 64) { fail("bad account"); return; }
+  sset("S" + String.UTF8.decode(a.buffer), oneByte());
+  log("seller allowed: " + String.UTF8.decode(a.buffer));
+}
+
+function oneByte(): Uint8Array { const b = new Uint8Array(1); b[0] = 1; return b; }
+
+/// set_budget(args: [1 agent index][16 amount, u128 little-endian]): agent's remaining payment
+/// budget in the settlement token's smallest unit. Owner only.
+export function set_budget(): void {
+  ownerOrFail();
+  const a = readInput();
+  if (a.length != 17) { fail("bad args"); return; }
+  const nb = sget("n");
+  if (nb == null || <i32>a[0] >= <i32>nb![0]) { fail("unknown agent"); return; }
+  sset("b" + (<i32>a[0]).toString(), a.slice(1, 17));
+}
+
+/// get_budget(args: [1 agent index]): remaining budget as a decimal string.
+export function get_budget(): void {
+  const a = readInput();
+  if (a.length != 1) { fail("bad args"); return; }
+  const b = sget("b" + (<i32>a[0]).toString());
+  returnBytes(utf8(b == null ? "0" : u128ToDec(b!)));
+}
+
+// ------------------------------------------------------------------ u128 (little-endian bytes)
+
+function u128Le(a: Uint8Array, b: Uint8Array): bool { // a <= b
+  for (let i = 15; i >= 0; i--) {
+    if (a[i] != b[i]) return a[i] < b[i];
+  }
+  return true;
+}
+
+function u128Sub(a: Uint8Array, b: Uint8Array): Uint8Array { // a - b, assumes a >= b
+  const out = new Uint8Array(16);
+  let borrow = 0;
+  for (let i = 0; i < 16; i++) {
+    let d = <i32>a[i] - <i32>b[i] - borrow;
+    borrow = d < 0 ? 1 : 0;
+    if (d < 0) d += 256;
+    out[i] = <u8>d;
+  }
+  return out;
+}
+
+function u128Add(a: Uint8Array, b: Uint8Array): Uint8Array {
+  const out = new Uint8Array(16);
+  let carry = 0;
+  for (let i = 0; i < 16; i++) {
+    const v = <i32>a[i] + <i32>b[i] + carry;
+    out[i] = <u8>(v & 255);
+    carry = v >> 8;
+  }
+  return out;
+}
+
+function u128IsZero(a: Uint8Array): bool {
+  for (let i = 0; i < 16; i++) if (a[i] != 0) return false;
+  return true;
+}
+
+function u128ToDec(a: Uint8Array): string {
+  const n = new Uint8Array(16); n.set(a);
+  if (u128IsZero(n)) return "0";
+  let s = "";
+  while (!u128IsZero(n)) {
+    let rem = 0;
+    for (let i = 15; i >= 0; i--) {
+      const cur = (rem << 8) | <i32>n[i];
+      n[i] = <u8>(cur / 10);
+      rem = cur % 10;
+    }
+    s = String.fromCharCode(48 + rem) + s;
+  }
+  return s;
+}
+
+// ------------------------------------------------------------------ settlement
+
+/// settle(args: [32 auction id][16 amount, u128 LE][1 len][seller account]). Called by an agent.
+export function settle(): void {
+  const nb = sget("n");
+  if (nb == null) { fail("not configured"); return; }
+  const paused = sget("paused");
+  if (paused != null && paused!.length > 0 && paused![0] == 1) { fail("vault is paused"); return; }
+  const intents = sget("intents");
+  const token = sget("token");
+  if (intents == null || token == null) { fail("settlement is not configured"); return; }
+
+  const caller = predecessor();
+  let agent = -1;
+  for (let i = 0; i < <i32>nb![0]; i++) {
+    const k = sget("a" + i.toString());
+    if (k != null && eq(k!, caller)) { agent = i; break; }
+  }
+  if (agent < 0) { fail("caller is not one of this vault's agents"); return; }
+
+  const a = readInput();
+  if (a.length < 50) { fail("bad args"); return; }
+  const auctionId = a.subarray(0, 32);
+  const amount = a.slice(32, 48);
+  const sl = <i32>a[48];
+  if (49 + sl != a.length || sl < 2) { fail("bad seller"); return; }
+  const seller = String.UTF8.decode(a.slice(49, 49 + sl).buffer);
+  if (sget("S" + seller) == null) { fail("seller is not on the owner's allowlist"); return; }
+  if (u128IsZero(amount)) { fail("amount must be positive"); return; }
+
+  const used = new Uint8Array(34); used[0] = 0x75; used[1] = <u8>agent; used.set(auctionId, 2);
+  if (!sgetBytesKey(used)) { fail("this agent did not enter this auction"); return; }
+  const paidKey = new Uint8Array(34); paidKey.set(used); paidKey[0] = 0x70; // 'p'
+  if (sgetBytesKey(paidKey)) { fail("this agent already paid for this auction"); return; }
+
+  const bkey = "b" + agent.toString();
+  const budget = sget(bkey);
+  if (budget == null || !u128Le(amount, budget!)) { fail("amount exceeds this agent's budget"); return; }
+  sset(bkey, u128Sub(budget!, amount));
+  ssetBytesKey(paidKey, oneByte());
+
+  const dec = u128ToDec(amount);
+  const memo = "SealedSwarm auction 0x" + toHex(auctionId) + " agent " + (agent + 1).toString();
+  const args = utf8('{"receiver_id":"' + seller + '","token_id":"nep141:' + String.UTF8.decode(token!.buffer) +
+    '","amount":"' + dec + '","memo":"' + memo + '"}');
+  const method = utf8("mt_transfer");
+  const yocto = new Uint8Array(16); yocto[0] = 1;
+  log("agent " + (agent + 1).toString() + " pays " + dec + " to " + seller + " via NEAR Intents");
+  const p = promise_create(<u64>intents!.length, ptr(intents!), <u64>method.length, ptr(method), <u64>args.length, ptr(args), ptr(yocto), SETTLE_GAS);
+
+  const cbArgs = new Uint8Array(49); cbArgs[0] = <u8>agent; cbArgs.set(auctionId, 1); cbArgs.set(amount, 33);
+  const self = selfId();
+  const cb = utf8("on_settled");
+  const zero = new Uint8Array(16);
+  const p2 = promise_then(p, <u64>self.length, ptr(self), <u64>cb.length, ptr(cb), <u64>cbArgs.length, ptr(cbArgs), ptr(zero), CALLBACK_GAS);
+  promise_return(p2);
+}
+
+/// on_settled(args: [1 agent][32 auction][16 amount]): private callback; refunds the budget if
+/// the transfer failed.
+export function on_settled(): void {
+  if (!eq(predecessor(), selfId())) { fail("private callback"); return; }
+  const a = readInput();
+  if (a.length != 49) { fail("bad args"); return; }
+  const ok = promise_results_count() == 1 && promise_result(0, REG) == 1;
+  if (ok) { log("settlement confirmed"); returnBytes(utf8("true")); return; }
+  const agent = <i32>a[0];
+  const bkey = "b" + agent.toString();
+  const budget = sget(bkey);
+  const restored = budget == null ? a.slice(33, 49) : u128Add(budget!, a.slice(33, 49));
+  sset(bkey, restored);
+  const paidKey = new Uint8Array(34); paidKey[0] = 0x70; paidKey[1] = <u8>agent; paidKey.set(a.subarray(1, 33), 2);
+  storage_remove_key(paidKey);
+  log("settlement failed; budget restored");
+  returnBytes(utf8("false"));
 }
 
 /// has_bid(args: [1 agent index (0-based)][32 auction id]): "true" or "false".

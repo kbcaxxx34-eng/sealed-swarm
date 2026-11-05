@@ -59,7 +59,10 @@
 
   <section>
     <h2><span class="n">1</span>Connect your NEAR account</h2>
-    <div class="row"><button id="btnNear">Connect Meteor Wallet</button><button id="btnNearOut" class="ghost" hidden>Disconnect</button><span id="nearInfo" class="mut">Use the Meteor Wallet extension on <b>Testnet</b> (account ending in <code>.testnet</code>).</span></div>
+    <div class="row"><button id="btnNear">Connect Meteor Wallet</button><button id="btnNearOut" class="ghost" hidden>Disconnect</button><span id="nearInfo" class="mut">Use the Meteor Wallet extension on the network selected here.</span></div>
+    <div class="row" style="margin-top:8px"><span class="mut">NEAR network</span>
+      <select id="netSel" style="width:auto"><option value="testnet">Testnet</option><option value="mainnet">Mainnet (adds settlement through NEAR Intents)</option></select>
+      <span class="mut">Bids always go to Ethereum Sepolia (Zama FHE). Mainnet uses real NEAR.</span></div>
   </section>
 
   <section>
@@ -75,6 +78,10 @@
       <button id="btnRogue" class="ghost" disabled>Simulate a compromised agent</button>
     </div>
     <div id="vaultResult" class="result"></div>
+    <div class="row mainnet-only" hidden style="margin-top:8px">
+      <button id="btnFundIntents" class="sec" disabled>Deposit wNEAR into NEAR Intents for the vault</button>
+      <span class="mut">Vault balance on NEAR Intents: <b id="intentsBal">—</b> · each agent's spending limit: 0.03 wNEAR</span>
+    </div>
     <h2 style="margin-top:18px">Agents</h2>
     <p class="mut">On Ethereum, each agent is an address derived from the vault account and the agent's path. Nobody holds its private key. Agents that can't reach the reserve alone form an <b>encrypted buyer pool</b>: the contract adds their contributions under FHE and nobody, not even the other members, sees what each one put in.</p>
     <div class="grid3" id="agents"></div>
@@ -122,6 +129,11 @@
     <div class="row"><button id="btnClose" class="sec" disabled>Close auction (MetaMask)</button><button id="btnReveal" disabled>Decrypt winner &amp; price, publish on-chain</button></div>
     <p class="mut">Closing computes the outcome under encryption and marks only two values as publicly decryptable: the winner and the price (2nd-highest bid, or the reserve). Losing bids stay sealed forever.</p>
     <div id="revealResult" class="result"></div>
+    <div class="row mainnet-only" hidden style="margin-top:10px">
+      <button id="btnSettle" disabled>Winner pays the seller via NEAR Intents</button>
+      <span class="mut">The winning agent (or each pool member, for its share) asks the vault; the vault checks the seller allowlist and the agent's spending limit, then calls <code>mt_transfer</code> on <code>intents.near</code>.</span>
+    </div>
+    <div id="settleResult" class="result"></div>
   </section>
 
   <section>
