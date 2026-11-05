@@ -101,6 +101,15 @@
     <div class="row">
       <span class="mut">Market estimate</span><input id="estimate" type="number" min="1" value="100" style="width:110px" />
       <button id="btnAppraise" class="sec" disabled>Agents appraise</button>
+    </div>
+    <div class="row" style="margin-top:8px">
+      <span class="mut">AI brain (optional)</span>
+      <select id="aiModel" style="width:auto">
+        <option value="Qwen/Qwen3.6-35B-A3B-FP8">NEAR AI · Qwen3.6 35B (TEE)</option>
+        <option value="deepseek-ai/DeepSeek-V4.1-Flash-1017">NEAR AI · DeepSeek V4.1 Flash (TEE)</option>
+        <option value="z-ai/glm-5.3-flash">NEAR AI · GLM 5.3 Flash (TEE)</option>
+      </select>
+      <input id="aiKey" type="password" autocomplete="off" placeholder="NEAR AI Cloud API key (kept in memory only)" style="width:300px" />
       <button id="btnBid" disabled>Agents bid on their own</button>
     </div>
     <p class="lock">No wallet pop-ups: each agent encrypts its bid and asks the vault; the vault gets it signed, or refuses. On-chain, other bidders, the seller and the contract only ever see ciphertexts.</p>

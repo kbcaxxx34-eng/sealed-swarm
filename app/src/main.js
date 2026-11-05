@@ -40,6 +40,7 @@ const AGENTS = [
 // ------------------------------------------------------------------ ui helpers
 const $ = (id) => document.getElementById(id);
 const short = (a) => (a ? `${a.slice(0, 6)}…${a.slice(-4)}` : "");
+const escapeHtml = (t) => String(t).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 const errMsg = (e) => e?.shortMessage || e?.reason || e?.message || String(e);
 function log(msg, kind = "") {
   const line = document.createElement("div");
@@ -279,7 +280,8 @@ function renderAgents() {
       <div class="mut">path <code>${a.path}</code> · ${a.balance == null ? "—" : Number(formatEther(a.balance)).toFixed(4) + " ETH"}</div>
       <label>Budget (units)</label><input type="number" min="1" value="${a.budget}" data-budget="${i}" />
       <div class="val">${a.valuation == null ? '<span class="mut">No appraisal yet</span>'
-        : `Private valuation: <b>${a.valuation}</b> → sealed bid <b>${a.bid}</b> <span class="lock">🔒 encrypted before sending</span>`}</div>
+        : `Private valuation: <b>${a.valuation}</b> → sealed bid <b>${a.bid}</b> <span class="lock">🔒 encrypted before sending</span>
+           <div class="mut" style="margin-top:4px">${a.brain && a.brain !== "rules" ? `🧠 ${a.brain}: “${escapeHtml(a.reason || "")}”` : "rule-based strategy"}</div>`}</div>
     </div>`).join("");
   document.querySelectorAll("[data-budget]").forEach((el) =>
     el.addEventListener("change", (e) => { state.agents[+e.target.dataset.budget].budget = Math.max(1, +e.target.value || 1); }));
@@ -396,14 +398,62 @@ function unitFraction(seed) {
   return Number(BigInt(h.slice(0, 14))) / 2 ** 54;
 }
 
-function appraise() {
+function ruleValuation(a, est) {
+  const f = a.range[0] + (a.range[1] - a.range[0]) * unitFraction(`${state.accountId}|${a.path}|${state.contract}|${state.selected}`);
+  return Math.max(1, Math.round(est * f));
+}
+
+// Each agent reasons privately on NEAR AI Cloud (models run inside TEEs). The model only proposes a
+// valuation; code caps it by the agent's budget, and the vault caps what can ever be signed.
+async function aiValuation(a, est, lot, key, model) {
+  const sys = `You are ${a.name}, an autonomous procurement agent in a sealed-bid second-price (Vickrey) auction. ` +
+    `Your style: ${a.style}. ${a.why} In a second-price auction the dominant strategy is to bid your true value. ` +
+    `Answer with JSON only: {"valuation": <integer units>, "reason": "<max 20 words>"}.`;
+  const user = `Lot: "${lot.item}". Public reserve: ${lot.reservePrice} units. Market estimate: ${est} units. ` +
+    `Your budget: ${a.budget} units. What is this lot truly worth to you?`;
+  const res = await fetch("https://cloud-api.near.ai/v1/chat/completions", {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Authorization: `Bearer ${key}` },
+    body: JSON.stringify({ model, temperature: 0.4, max_tokens: 400,
+      messages: [{ role: "system", content: sys }, { role: "user", content: user }] }),
+  });
+  if (!res.ok) throw new Error(`NEAR AI HTTP ${res.status}`);
+  const out = await res.json();
+  const text = out?.choices?.[0]?.message?.content || "";
+  const m = text.replace(/<think>[\s\S]*?<\/think>/g, "").match(/\{[\s\S]*\}/);
+  if (!m) throw new Error("no JSON in model answer");
+  const j = JSON.parse(m[0]);
+  const v = Math.round(Number(j.valuation));
+  if (!Number.isFinite(v) || v < 1) throw new Error("invalid valuation");
+  return { valuation: Math.min(v, est * 10), reason: String(j.reason || "").slice(0, 160) };
+}
+
+async function appraise() {
+  const btn = $("btnAppraise");
   const est = Math.max(1, Math.floor(+$("estimate").value || 100));
-  for (const a of state.agents) {
-    const f = a.range[0] + (a.range[1] - a.range[0]) * unitFraction(`${state.accountId}|${a.path}|${state.contract}|${state.selected}`);
-    a.valuation = Math.max(1, Math.round(est * f));
-    a.bid = Math.min(a.valuation, a.budget); // second-price: bidding true value (capped by budget) is optimal
-  }
-  log(`Agents appraised auction #${state.selected} against a market estimate of ${est}. Valuations stay in this browser.`);
+  const lot = state.auctions.find((x) => x.id === state.selected) || { item: "lot", reservePrice: 0 };
+  const key = $("aiKey").value.trim();
+  const model = $("aiModel").value;
+  busy(btn, true, key ? "Agents thinking…" : "Appraising…");
+  if (key) log(`Agents reason privately on NEAR AI Cloud (${model}, TEE). Their valuations never leave this browser in clear.`);
+  await Promise.all(state.agents.map(async (a) => {
+    a.reason = null; a.brain = "rules";
+    if (key) {
+      try {
+        const r = await aiValuation(a, est, lot, key, model);
+        a.valuation = r.valuation; a.reason = r.reason; a.brain = model.split("/").pop();
+      } catch (e) {
+        log(`${a.name}: NEAR AI unavailable (${errMsg(e)}); falling back to its rule-based strategy.`, "warn");
+        a.valuation = ruleValuation(a, est);
+      }
+    } else {
+      a.valuation = ruleValuation(a, est);
+    }
+    a.bid = Math.min(a.valuation, a.budget); // second-price: true value is optimal; the budget cap is enforced in code
+    if (a.valuation > a.budget) log(`${a.name} valued it at ${a.valuation} but its budget caps the bid at ${a.budget}.`, "warn");
+  }));
+  log(`Agents appraised auction #${state.selected} ("${lot.item}") against a market estimate of ${est}.`);
+  busy(btn, false);
   renderAgents(); updateUi();
 }
 

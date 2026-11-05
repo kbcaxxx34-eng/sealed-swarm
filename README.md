@@ -58,7 +58,9 @@ These first runs used one Meteor approval for the whole swarm. The vault flow (a
 
 **Auction rules.** Second-price with a public reserve. The highest bidder wins and pays the higher of the second-highest bid and the reserve. If no bid reaches the reserve, there is no sale. Ties go to the earlier bidder. One bid per address, up to 64 bids per auction.
 
-**Agents.** Each agent appraises the lot against a market estimate using its own strategy and budget (Atlas: value hunter, Nova: aggressive, Quill: budget-capped). In this prototype the strategies are deterministic rules that run in the browser, not an LLM. Because the auction is second-price, each agent bids its true valuation, capped by its budget.
+**Agents.** Each agent (Atlas: value hunter, Nova: aggressive, Quill: budget-capped) appraises the lot. With a NEAR AI Cloud API key, each agent reasons with an open model running inside a TEE on NEAR AI Cloud (Qwen3.6, DeepSeek V4.1 Flash or GLM 5.3 Flash, all attested), so its strategy and valuation stay private end to end: private inference in a TEE, then an FHE-encrypted bid on-chain. The model only *proposes* a valuation: code caps the bid at the agent's budget, and the vault caps what can ever be signed. Without a key, agents fall back to deterministic rule-based strategies. Because the auction is second-price, each agent bids its true valuation.
+
+**Use case: buying GPU hours.** Default lot: *"GPU hour"*. Picture a swarm of agents procuring compute for their owners: each one has its own budget and urgency, none should reveal its willingness to pay to competing agents or to the provider, and the provider should get a fair market price. SealedSwarm gives the provider a truthful second-price auction and gives every agent privacy for its bid and a hard spending policy on NEAR.
 
 ## Run it
 
@@ -67,6 +69,7 @@ Requirements: Node 20+.
 ```bash
 npm install
 npx hardhat test          # 11 tests on the Zama FHE mock
+npm run test:all          # auction tests + vault tests
 ```
 
 Front end:
@@ -107,7 +110,7 @@ npm test                  # 9 tests against a mocked NEAR host
 - Testnet prototype; not audited.
 - No payment escrow: the contract decides the winner and the price but does not move funds. Settlement (for example a confidential token transfer) is the next step.
 - The number of bids per auction is public; the values are not.
-- Agent strategies are simple deterministic rules, not an LLM.
+- LLM reasoning needs the user's own NEAR AI Cloud API key, typed into the page and kept only in memory; without it agents use rules.
 - Seller actions (deploy, create, close, reveal) use MetaMask in the demo; any account can call `close` and `reveal`.
 - Agent keys live in the browser's local storage in this demo (testnet only). They can only call `request_sign`, which the vault restricts to bids on the approved auction.
 - The vault's policy is fixed at creation; changing it means creating a new vault.

@@ -82,7 +82,8 @@
     "chain": "hardhat node --network hardhat --no-deploy",
     "deploy:localhost": "hardhat deploy --network localhost",
     "deploy:sepolia": "hardhat deploy --network sepolia",
-    "verify:sepolia": "hardhat verify --network sepolia"
+    "verify:sepolia": "hardhat verify --network sepolia",
+    "test:all": "hardhat test && cd near-vault && npm install --silent && npm test"
   },
   "overrides": {
     "ws@>=7.0.0 <7.5.10": ">=7.5.10",
