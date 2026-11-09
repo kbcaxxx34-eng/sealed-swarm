@@ -22,7 +22,7 @@ const DEFAULT_CONTRACT = ""; // v2 (buyer pools): set after the Sepolia deployme
 // Bids always go to Sepolia (Zama FHE); only the NEAR side changes.
 const NET = (() => { try { return localStorage.getItem("ssNet") === "mainnet" ? "mainnet" : "testnet"; } catch (_) { return "testnet"; } })();
 const NETS = {
-  testnet: { mpc: "v1.signer-prod.testnet", rpcs: ["https://rpc.testnet.near.org", "https://test.rpc.fastnear.com"], suffix: ".testnet", explorer: "https://testnet.nearblocks.io" },
+  testnet: { mpc: "v1.signer-prod.testnet", rpcs: ["https://test.rpc.fastnear.com", "https://rpc.testnet.near.org"], suffix: ".testnet", explorer: "https://testnet.nearblocks.io" },
   mainnet: { mpc: "v1.signer", rpcs: ["https://free.rpc.fastnear.com", "https://rpc.mainnet.near.org"], suffix: ".near", explorer: "https://nearblocks.io" },
 };
 const MPC_CONTRACT = NETS[NET].mpc;
@@ -97,6 +97,21 @@ async function rawRpc(method, params) {
     } catch (e) { if (e.fatal) throw e; last = e; }
   }
   throw Object.assign(new Error("retry"), { retry: true, last });
+}
+// read-only calls through the same direct JSON-RPC path (retrying across nodes)
+async function nearQuery(params) {
+  for (let i = 0; i < 4; i++) {
+    try { return await rawRpc("query", params); }
+    catch (e) { if (!e.retry) throw e; await new Promise((r) => setTimeout(r, 1500)); }
+  }
+  throw new Error("NEAR RPC unavailable, try again");
+}
+async function nearBlock() {
+  for (let i = 0; i < 4; i++) {
+    try { return await rawRpc("block", { finality: "final" }); }
+    catch (e) { if (!e.retry) throw e; await new Promise((r) => setTimeout(r, 1500)); }
+  }
+  throw new Error("NEAR RPC unavailable, try again");
 }
 async function sendAndWait(signed, signerId) {
   const b64 = btoa(String.fromCharCode(...signed.encode()));
@@ -197,7 +212,7 @@ function loadAgentKeys() {
 }
 
 async function viewVault(method, argsBytes = new Uint8Array()) {
-  const res = await nearRpc.query({
+  const res = await nearQuery({
     request_type: "call_function", finality: "optimistic", account_id: state.vaultId,
     method_name: method, args_base64: btoa(String.fromCharCode(...argsBytes)),
   });
@@ -271,7 +286,7 @@ async function fundIntents() {
 async function refreshIntentsBalance() {
   if (NET !== "mainnet" || !state.vaultId) return;
   try {
-    const res = await nearRpc.query({ request_type: "call_function", finality: "optimistic", account_id: INTENTS, method_name: "mt_balance_of",
+    const res = await nearQuery({ request_type: "call_function", finality: "optimistic", account_id: INTENTS, method_name: "mt_balance_of",
       args_base64: btoa(JSON.stringify({ account_id: state.vaultId, token_id: `nep141:${SETTLE_TOKEN}` })) });
     const bal = JSON.parse(new TextDecoder().decode(new Uint8Array(res.result)));
     $("intentsBal").textContent = `${Number(BigInt(bal)) / 1e24} wNEAR`;
@@ -285,8 +300,8 @@ async function agentSettle(idx, auctionId, units, seller) {
   const account = agentAccount(idx);
   const id = new Uint8Array(32); let x = BigInt(auctionId); for (let i = 31; i >= 0; i--) { id[i] = Number(x & 255n); x >>= 8n; }
   const args = new Uint8Array([...id, ...u128le(BigInt(units) * UNIT_YOCTO), seller.length, ...enc8(seller)]);
-  const ak = await nearRpc.query({ request_type: "view_access_key", finality: "final", account_id: account, public_key: pub.toString() });
-  const block = await nearRpc.block({ finality: "final" });
+  const ak = await nearQuery({ request_type: "view_access_key", finality: "final", account_id: account, public_key: pub.toString() });
+  const block = await nearBlock();
   const tx = createTransaction(account, pub, state.vaultId, BigInt(ak.nonce) + 1n,
     [actionCreators.functionCall("settle", args, 100n * TGAS, 0n)], baseDecode(block.header.hash));
   const hash = new Uint8Array(await crypto.subtle.digest("SHA-256", encodeTransaction(tx)));
@@ -349,11 +364,11 @@ async function signLocal(signerId, kp, receiverId, actions) {
   const pub = kp.getPublicKey();
   let ak = null;
   for (let i = 0; i < 15 && !ak; i++) {
-    try { ak = await nearRpc.query({ request_type: "view_access_key", finality: "final", account_id: signerId, public_key: pub.toString() }); }
+    try { ak = await nearQuery({ request_type: "view_access_key", finality: "final", account_id: signerId, public_key: pub.toString() }); }
     catch (_) { await new Promise((r) => setTimeout(r, 2000)); }
   }
   if (!ak) throw new Error(`${signerId} not visible yet; try again in a minute.`);
-  const block = await nearRpc.block({ finality: "final" });
+  const block = await nearBlock();
   const tx = createTransaction(signerId, pub, receiverId, BigInt(ak.nonce) + 1n, actions, baseDecode(block.header.hash));
   const hash = new Uint8Array(await crypto.subtle.digest("SHA-256", encodeTransaction(tx)));
   const signed = new SignedTransaction({ transaction: tx, signature: new Signature({ keyType: pub.keyType, data: kp.sign(hash).signature }) });
@@ -369,7 +384,7 @@ async function createVault() {
     // if step 1 already happened (e.g. step 2 failed), resume with the saved setup key
     const skey = `ssVaultSetupKey:${state.vaultId}`;
     let exists = false;
-    try { await nearRpc.query({ request_type: "view_account", finality: "final", account_id: state.vaultId }); exists = true; } catch (_) {}
+    try { await nearQuery({ request_type: "view_account", finality: "final", account_id: state.vaultId }); exists = true; } catch (_) {}
     let saved = null; try { saved = localStorage.getItem(skey); } catch (_) {}
     let temp;
     if (exists && saved) {
@@ -438,8 +453,8 @@ async function agentRequestSign(idx, unsignedTxHex) {
   const kp = state.agentKeys[idx];
   const pub = kp.getPublicKey();
   const account = agentAccount(idx);
-  const ak = await nearRpc.query({ request_type: "view_access_key", finality: "final", account_id: account, public_key: pub.toString() });
-  const block = await nearRpc.block({ finality: "final" });
+  const ak = await nearQuery({ request_type: "view_access_key", finality: "final", account_id: account, public_key: pub.toString() });
+  const block = await nearBlock();
   const txBytes = Uint8Array.from(unsignedTxHex.slice(2).match(/../g).map((x) => parseInt(x, 16)));
   const tx = createTransaction(account, pub, state.vaultId, BigInt(ak.nonce) + 1n,
     [actionCreators.functionCall("request_sign", txBytes, AGENT_CALL_GAS, 0n)], baseDecode(block.header.hash));
