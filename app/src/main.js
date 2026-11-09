@@ -115,7 +115,22 @@ async function nearBlock() {
 }
 async function sendAndWait(signed, signerId) {
   const b64 = btoa(String.fromCharCode(...signed.encode()));
-  const hash = await rawRpc("broadcast_tx_async", [b64]);
+  // send_tx waits until the transaction is included in a block, and returns validation errors
+  // (bad nonce, bad signature, key not allowed…) right away instead of silently dropping the tx
+  let hash = null;
+  for (let i = 0; i < 3 && !hash; i++) {
+    for (const url of NETS[NET].rpcs) {
+      try {
+        const r = await (await fetch(url, { method: "POST", headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ jsonrpc: "2.0", id: 1, method: "send_tx", params: { signed_tx_base64: b64, wait_until: "INCLUDED" } }) })).json();
+        if (r.result) { hash = r.result.transaction?.hash || r.result.transaction_outcome?.id; if (r.result.status && r.result.final_execution_status === "FINAL") return r.result; break; }
+        const err = JSON.stringify(r.error || {});
+        if (/TIMEOUT|Timeout/i.test(err)) continue;
+        throw new Error("NEAR rejected the transaction: " + err.slice(0, 400));
+      } catch (e) { if (String(e.message).startsWith("NEAR rejected")) throw e; }
+    }
+  }
+  if (!hash) { hash = await rawRpc("broadcast_tx_async", [b64]); }
   for (let i = 0; i < 40; i++) {
     try {
       const out = await rawRpc("tx", { tx_hash: hash, sender_account_id: signerId, wait_until: "FINAL" });
@@ -425,6 +440,22 @@ async function createVault() {
     log(`Vault deployed and locked: it has no keys left (${NETS[NET].explorer}/txns/${r.hash}).`, "ok");
     await refreshVault();
   } catch (e) { log("Vault creation failed: " + errMsg(e), "err"); }
+  busy(btn, false); updateUi();
+}
+
+// Agents pay their own NEAR gas. A request_sign call prepays 300 Tgas (the MPC signer needs it): about
+// 0.3 NEAR at testnet gas prices (most of it is refunded), so on testnet agents need more than the
+// 0.25 NEAR the vault gives them. The owner tops them up with plain transfers (one Meteor approval).
+const AGENT_TOPUP = NET === "testnet" ? 1n * NEAR : 0n;
+async function topUpAgentsNear() {
+  const btn = $("btnTopUp");
+  busy(btn, true, "Approve in Meteor…");
+  try {
+    await state.wallet.signAndSendTransactions({ transactions: state.agents.map((_, i) => ({
+      signerId: state.accountId, receiverId: agentAccount(i), actions: [actionCreators.transfer(AGENT_TOPUP)],
+    })) });
+    log(`Sent ${Number(AGENT_TOPUP / NEAR)} testnet NEAR to each agent account for gas.`, "ok");
+  } catch (e) { log("Top-up failed: " + errMsg(e), "err"); }
   busy(btn, false); updateUi();
 }
 
@@ -933,6 +964,7 @@ function updateUi() {
   $("btnPause").disabled = !vaultReady;
   $("btnRogue").disabled = !(vaultReady && haveSwarm);
   $("btnFundIntents").disabled = !(vaultReady && NET === "mainnet");
+  $("btnTopUp").disabled = !vaultReady;
   const selA = state.auctions.find((x) => x.id === state.selected);
   $("btnSettle").disabled = !(NET === "mainnet" && vaultReady && selA?.revealed && selA.winner !== "0x0000000000000000000000000000000000000000");
   $("btnFund").disabled = !haveSwarm;
@@ -951,6 +983,7 @@ $("btnVault").addEventListener("click", createVault);
 $("btnPause").addEventListener("click", togglePause);
 $("btnRogue").addEventListener("click", simulateRogue);
 $("btnFundIntents").addEventListener("click", fundIntents);
+$("btnTopUp").addEventListener("click", topUpAgentsNear);
 $("btnSettle").addEventListener("click", settleAuction);
 $("netSel").value = NET;
 $("netSel").addEventListener("change", (e) => { try { localStorage.setItem("ssNet", e.target.value); } catch (_) {} location.reload(); });
