@@ -147,6 +147,15 @@ test("rejects malformed transactions", () => {
   expectPanic(() => vm.call("request_sign", { input: legacy, predecessor: s }), "EIP-1559");
 });
 
+test("self-configured vault (temporary key, deleted at setup): owner is the parent account", () => {
+  const vm = makeVm({ accountId: VAULT });
+  vm.call("configure", { input: configArgs({ auction: AUCTION, agents: AGENTS }), predecessor: VAULT });
+  assert.equal(JSON.parse(vm.call("get_config").ret).owner, "owner.testnet");
+  vm.call("pause", { input: new Uint8Array([1]), predecessor: "owner.testnet" });
+  vm.call("pause", { input: new Uint8Array([0]), predecessor: VAULT });
+  expectPanic(() => vm.call("pause", { input: new Uint8Array([1]), predecessor: "mallory.testnet" }), "only the owner");
+});
+
 const USDC = "17208628f84f5d6ad33f0da3bbbeb27ffcb398eac501a31bd6ad2011e36133a1";
 function settlementSetup() {
   const { vm } = setup();

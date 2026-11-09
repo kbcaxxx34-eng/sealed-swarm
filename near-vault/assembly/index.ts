@@ -150,10 +150,13 @@ function toHex(b: Uint8Array): string {
 
 function predecessor(): Uint8Array { predecessor_account_id(REG); return readRegister(); }
 
+// The vault itself also counts as owner: the app deploys it with a temporary full-access key that is
+// deleted in the same transaction, so after setup no one can sign as the vault again.
 function ownerOrFail(): void {
   const owner = sget("owner");
   if (owner == null) { fail("not configured"); return; }
-  if (!eq(predecessor(), owner!)) fail("only the owner can do this");
+  const p = predecessor();
+  if (!eq(p, owner!) && !eq(p, selfId())) fail("only the owner can do this");
 }
 
 // ------------------------------------------------------------------ RLP (just enough for EIP-1559)
@@ -208,7 +211,16 @@ function selfId(): Uint8Array { current_account_id(REG); return readRegister(); 
 /// function-call key restricted to <vault>.request_sign (no allowance cap; the balance is the cap).
 export function configure(): void {
   if (sget("owner") != null) { fail("already configured"); return; }
-  sset("owner", predecessor());
+  // owner = the caller; when the vault configures itself during setup, the owner is its parent
+  // account (vault.alice.testnet → alice.testnet)
+  const caller = predecessor();
+  const me = selfId();
+  if (eq(caller, me)) {
+    let dot = -1;
+    for (let i = 0; i < me.length; i++) if (me[i] == 0x2e) { dot = i; break; }
+    if (dot < 0) { fail("vault must be a sub-account"); return; }
+    sset("owner", me.slice(dot + 1));
+  } else sset("owner", caller);
 
   const a = readInput();
   let p = 0;

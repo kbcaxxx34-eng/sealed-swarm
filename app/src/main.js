@@ -302,23 +302,67 @@ async function createBotAccount() {
   } catch (e) { log("Bot account creation failed: " + errMsg(e), "err"); }
 }
 
+// Meteor (rightly) refuses to deploy contract code from a web page. So setup is two transactions:
+//  1. Meteor: create vault.<you> with 3 NEAR and a temporary full-access key generated in this page
+//  2. this page, signing with that temporary key: deploy the vault, configure it (the vault records
+//     <you> as owner) and DELETE the temporary key in the same transaction. Afterwards the vault has
+//     no keys at all: only its code decides what happens.
+async function signLocal(signerId, kp, receiverId, actions) {
+  const pub = kp.getPublicKey();
+  let ak = null;
+  for (let i = 0; i < 15 && !ak; i++) {
+    try { ak = await nearRpc.query({ request_type: "view_access_key", finality: "final", account_id: signerId, public_key: pub.toString() }); }
+    catch (_) { await new Promise((r) => setTimeout(r, 2000)); }
+  }
+  if (!ak) throw new Error(`${signerId} not visible yet; try again in a minute.`);
+  const block = await nearRpc.block({ finality: "final" });
+  const tx = createTransaction(signerId, pub, receiverId, BigInt(ak.nonce) + 1n, actions, baseDecode(block.header.hash));
+  const hash = new Uint8Array(await crypto.subtle.digest("SHA-256", encodeTransaction(tx)));
+  const signed = new SignedTransaction({ transaction: tx, signature: new Signature({ keyType: pub.keyType, data: kp.sign(hash).signature }) });
+  const outcome = await nearRpc.sendTransactionUntil(signed, "FINAL");
+  return { failure: nearFailure(outcome), hash: outcome?.transaction?.hash };
+}
+
 async function createVault() {
   const btn = $("btnVault");
   busy(btn, true, "Approve in Meteor…");
   try {
     const wasm = new Uint8Array(await (await fetch(vaultWasmUrl)).arrayBuffer());
-    log(`Creating ${state.vaultId}: deploy the vault, set the policy, and create one sub-account per agent (${state.agents.map((_, i) => agentAccount(i)).join(", ")}), each with a key that can only call request_sign.`);
-    await state.wallet.signAndSendTransaction({
-      receiverId: state.vaultId,
-      actions: [
-        actionCreators.createAccount(),
-        actionCreators.transfer(VAULT_DEPOSIT),
-        actionCreators.deployContract(wasm),
-        actionCreators.functionCall("configure", vaultConfigBytes(), 100n * TGAS, 0n),
-        ...settlementSetupActions(),
-      ],
-    });
-    log("Vault created and agent sub-accounts registered.", "ok");
+    // if step 1 already happened (e.g. step 2 failed), resume with the saved setup key
+    const skey = `ssVaultSetupKey:${state.vaultId}`;
+    let exists = false;
+    try { await nearRpc.query({ request_type: "view_account", finality: "final", account_id: state.vaultId }); exists = true; } catch (_) {}
+    let saved = null; try { saved = localStorage.getItem(skey); } catch (_) {}
+    let temp;
+    if (exists && saved) {
+      temp = KeyPair.fromString(saved);
+      log(`${state.vaultId} already exists: resuming setup with its temporary key.`);
+    } else if (exists) {
+      throw new Error(`${state.vaultId} already exists but this browser doesn't have its setup key.`);
+    } else {
+      temp = KeyPair.fromRandom("ed25519");
+      try { localStorage.setItem(skey, temp.toString()); } catch (_) {}
+      log(`Step 1/2: Meteor creates ${state.vaultId} with ${Number(VAULT_DEPOSIT / NEAR)} NEAR and a temporary setup key.`);
+      await state.wallet.signAndSendTransaction({
+        receiverId: state.vaultId,
+        actions: [
+          actionCreators.createAccount(),
+          actionCreators.transfer(VAULT_DEPOSIT),
+          actionCreators.addKey(temp.getPublicKey(), actionCreators.fullAccessKey()),
+        ],
+      });
+    }
+    busy(btn, false); busy(btn, true, "Deploying the vault…");
+    log(`Step 2/2: deploy the vault, set the policy, create ${state.agents.map((_, i) => agentAccount(i)).join(", ")}, then delete the setup key.`);
+    const r = await signLocal(state.vaultId, temp, state.vaultId, [
+      actionCreators.deployContract(wasm),
+      actionCreators.functionCall("configure", vaultConfigBytes(), 100n * TGAS, 0n),
+      ...settlementSetupActions(),
+      actionCreators.deleteKey(temp.getPublicKey()),
+    ]);
+    if (r.failure) throw new Error(r.failure);
+    try { localStorage.removeItem(skey); } catch (_) {}
+    log(`Vault deployed and locked: it has no keys left (${NETS[NET].explorer}/txns/${r.hash}).`, "ok");
     await refreshVault();
   } catch (e) { log("Vault creation failed: " + errMsg(e), "err"); }
   busy(btn, false); updateUi();
