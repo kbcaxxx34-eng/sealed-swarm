@@ -47,7 +47,7 @@ You need the Meteor Wallet extension on **testnet** with a funded `.testnet` acc
 
 1. Open https://sealedbid.lercomigo.space/swarm/ and **connect Meteor**. → The page shows your vault id `ssvault-<you>.testnet` and the three agents' Ethereum addresses, derived from the vault.
 2. **Create vault** (one Meteor approval). The wallet only asks the account registrar to create the vault account with a key this page generates; the page then deploys the vault, configures it and deletes that key in the same transaction, so the vault ends up with no keys at all. → `ssvault-<you>.testnet` is deployed and creates `atlas.`, `nova.` and `quill.ssvault-<you>.testnet`.
-3. **Fund agents** (MetaMask). → Each agent address gets 0.004 Sepolia ETH for gas.
+3. **Top up agents' NEAR gas** (Meteor; testnet gas prices make a 300 Tgas MPC call prepay ~0.3 NEAR, more than the 0.25 NEAR the vault gives each agent) and **Fund agents** (MetaMask). → Each agent account gets 1 testnet NEAR and each agent address 0.004 Sepolia ETH for gas.
 4. **Create an auction** (MetaMask), e.g. *8x H100 · 1 hour*, 5 minutes, reserve 100.
 5. **Agents appraise** (paste a NEAR AI key to use LLMs). → Each card shows a private valuation and the model's one-line reason; the *verification* panel lists the TEE attestation checks.
 6. **Agents bid on their own.** → No wallet pop-up. The log shows, per agent: encrypted amount, vault approval, MPC signature, Sepolia transaction. Agents below the reserve form a buyer pool.
@@ -107,7 +107,18 @@ First version (agents signed with one Meteor approval, before the vault and pool
 | Close auction #2 | [0x07ca57f3…](https://sepolia.etherscan.io/tx/0x07ca57f3f38a1eca97c90de66c11430f0b612093eb07d660b527b1fc47b2695e) |
 | Reveal #2: Nova wins and pays 85 (the second price), verified by Zama KMS signatures | [0x954301fb…](https://sepolia.etherscan.io/tx/0x954301fb7202fd1688f9110feacff497e7187d12c9dcf561365c8096ee55773e) |
 
-Current version (vault with agent sub-accounts, buyer pools): transactions will be added here after the testnet run.
+Current version, 9 Nov 2026: vault `ssvault-anderssonm.testnet` (no keys left after setup) with agent sub-accounts `atlas.`, `nova.`, `quill.ssvault-anderssonm.testnet`; auction contract [`0x4994b9537D50756c5858399bDd460Ba70BE878cc`](https://sepolia.etherscan.io/address/0x4994b9537D50756c5858399bDd460Ba70BE878cc). Auction #4, reserve 100: no agent could reach the reserve alone, so all three formed an encrypted buyer pool, each signing through the vault and the NEAR MPC network with no wallet pop-up.
+
+| Step | Transaction |
+|---|---|
+| Atlas opens pool #1 (vault-approved, MPC-signed) | [0x046a268c…](https://sepolia.etherscan.io/tx/0x046a268c76631cfd31acdb210a12f442e3287710babf46c918a9c7786ae5dee5) |
+| Nova joins pool #1 | [0xbca0e1cb…](https://sepolia.etherscan.io/tx/0xbca0e1cb0430ac8df25723fb9e9a8be17112091700335373e681f809aa607efc) |
+| Quill joins pool #1 | [0x987b82bd…](https://sepolia.etherscan.io/tx/0x987b82bdc08f520a07e151f06c0fa5b57256b83b8b4086150de387367c58250e) |
+| Atlas submits the pool (encrypted total competes as one bid) | [0x6371ac58…](https://sepolia.etherscan.io/tx/0x6371ac58d37d7d1dc8754885bb3990b3b8bb4197224a8fc88976bc348df9d925) |
+| Close auction #4 | [0xe6d7ad57…](https://sepolia.etherscan.io/tx/0xe6d7ad57f773262e36ce903cd4bd7ad8528a4351cb684c7ac636c20fa333f5b9) |
+| Reveal: pool #1 wins and pays 100 (reserve); members' shares 28 / 38 / 34, each computed privately | [0x547c6512…](https://sepolia.etherscan.io/tx/0x547c65125b1ceccc0babf314967f0b934dc612b390202a8ad1aa464b38637308) |
+
+The agents' NEAR-side calls (`request_sign` from each agent sub-account to the vault, then the vault's call to `v1.signer-prod.testnet`) are visible on each agent account: [atlas](https://testnet.nearblocks.io/address/atlas.ssvault-anderssonm.testnet) · [nova](https://testnet.nearblocks.io/address/nova.ssvault-anderssonm.testnet) · [quill](https://testnet.nearblocks.io/address/quill.ssvault-anderssonm.testnet).
 
 ## Limitations
 
