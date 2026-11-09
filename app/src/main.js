@@ -134,13 +134,21 @@ const state = {
   vaultId: null, vault: null, agentKeys: [], pools: {}, poolNames: {},
 };
 
-async function getFhe() {
-  if (state.fhe) return state.fhe;
-  log("Loading Zama FHE SDK (WASM)…");
-  await initSDK();
-  state.fhe = await createInstance({ ...SepoliaConfig, network: SEPOLIA_RPC });
-  log("FHE SDK ready.", "ok");
-  return state.fhe;
+let fhePromise = null;
+function getFhe() {
+  if (!fhePromise) fhePromise = (async () => {
+    log("Loading Zama FHE SDK (WASM)…");
+    await initSDK();
+    state.fhe = await createInstance({ ...SepoliaConfig, network: SEPOLIA_RPC });
+    log("FHE SDK ready.", "ok");
+    return state.fhe;
+  })().catch((e) => { fhePromise = null; throw e; });
+  return fhePromise;
+}
+
+// fails loudly instead of hanging, naming the step that got stuck
+function step(label, promise, ms = 90_000) {
+  return Promise.race([promise, new Promise((_, rej) => setTimeout(() => rej(new Error(`${label}: no answer after ${ms / 1000}s`)), ms))]);
 }
 
 async function metamaskSigner() {
@@ -782,17 +790,19 @@ async function appraise() {
 
 // One agent transaction: prepare → vault policy check + MPC signature → broadcast → receipt.
 async function agentSend(a, data) {
-  const { transaction } = await evm.prepareTransactionForSigning({ from: a.address, to: state.contract, data, value: 0n });
+  log(`${a.name}: preparing the Ethereum transaction (nonce, gas, fees from Sepolia)…`);
+  const { transaction } = await step("Sepolia gas estimate", evm.prepareTransactionForSigning({ from: a.address, to: state.contract, data, value: 0n }), 60_000);
   const cost = (transaction.gas ?? 0n) * (transaction.maxFeePerGas ?? 0n);
-  const bal = await publicClient.getBalance({ address: a.address });
+  const bal = await step("Sepolia balance", publicClient.getBalance({ address: a.address }), 30_000);
   if (bal < cost) throw new Error(`${a.name} needs ~${formatEther(cost)} ETH for gas (has ${formatEther(bal)}). Fund it first.`);
-  const r = await agentRequestSign(state.agents.indexOf(a), evm.serializeTransaction(transaction));
+  log(`${a.name}: asking the vault to sign (NEAR → MPC)…`);
+  const r = await step("vault request_sign", agentRequestSign(state.agents.indexOf(a), evm.serializeTransaction(transaction)), 150_000);
   if (!r.ok) throw new Error(`vault refused ${a.name}: ${r.reason}`);
   log(`${a.name}: vault approved, MPC signed${r.nearTx ? ` (NEAR tx ${r.nearTx.slice(0, 10)}…)` : ""}.`, "ok");
   const signed = evm.finalizeTransactionSigning({ transaction, rsvSignatures: [utils.cryptography.toRSV(r.sig)] });
-  const { hash } = await evm.broadcastTx(signed);
+  const { hash } = await step("Sepolia broadcast", evm.broadcastTx(signed), 60_000);
   log(`${a.name}: sent to Sepolia ${hash}`);
-  const rc = await publicClient.waitForTransactionReceipt({ hash });
+  const rc = await step("Sepolia receipt", publicClient.waitForTransactionReceipt({ hash }), 120_000);
   if (rc.status !== "success") throw new Error(`${a.name}: transaction reverted`);
   return rc;
 }
