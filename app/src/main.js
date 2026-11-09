@@ -82,6 +82,35 @@ const evm = new chainAdapters.evm.EVM({ publicClient, contract: mpc });
 const abi = artifact.abi;
 const nearRpc = new FailoverRpcProvider(NETS[NET].rpcs.map((url) => new JsonRpcProvider({ url })));
 
+// Sends a signed NEAR transaction and waits for its final outcome. A call that goes through the MPC
+// signer can take longer than an RPC node's request timeout, so: broadcast asynchronously, then poll
+// the transaction status (retrying timeouts and switching nodes) for up to ~2 minutes.
+async function rawRpc(method, params) {
+  let last;
+  for (const url of NETS[NET].rpcs) {
+    try {
+      const r = await (await fetch(url, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ jsonrpc: "2.0", id: 1, method, params }) })).json();
+      if (r.result !== undefined) return r.result;
+      last = r.error;
+      const name = JSON.stringify(r.error || "");
+      if (!/TIMEOUT|UNKNOWN_TRANSACTION|Timeout|timeout|unknown/i.test(name)) throw Object.assign(new Error(name.slice(0, 300)), { fatal: true });
+    } catch (e) { if (e.fatal) throw e; last = e; }
+  }
+  throw Object.assign(new Error("retry"), { retry: true, last });
+}
+async function sendAndWait(signed, signerId) {
+  const b64 = btoa(String.fromCharCode(...signed.encode()));
+  const hash = await rawRpc("broadcast_tx_async", [b64]);
+  for (let i = 0; i < 40; i++) {
+    try {
+      const out = await rawRpc("tx", { tx_hash: hash, sender_account_id: signerId, wait_until: "FINAL" });
+      if (out?.final_execution_status === "FINAL" || out?.status) return out;
+    } catch (e) { if (!e.retry) throw e; }
+    await new Promise((r) => setTimeout(r, 3000));
+  }
+  throw new Error(`transaction ${hash} not final after 2 minutes`);
+}
+
 const state = {
   selector: null, wallet: null, accountId: null,
   agents: AGENTS.map((a) => ({ ...a, address: null, balance: null, valuation: null, bid: null })),
@@ -262,7 +291,7 @@ async function agentSettle(idx, auctionId, units, seller) {
     [actionCreators.functionCall("settle", args, 100n * TGAS, 0n)], baseDecode(block.header.hash));
   const hash = new Uint8Array(await crypto.subtle.digest("SHA-256", encodeTransaction(tx)));
   const signed = new SignedTransaction({ transaction: tx, signature: new Signature({ keyType: pub.keyType, data: kp.sign(hash).signature }) });
-  const outcome = await nearRpc.sendTransactionUntil(signed, "FINAL");
+  const outcome = await sendAndWait(signed, tx.signerId);
   const failure = nearFailure(outcome);
   return { ok: !failure, reason: failure, nearTx: outcome?.transaction?.hash };
 }
@@ -328,7 +357,7 @@ async function signLocal(signerId, kp, receiverId, actions) {
   const tx = createTransaction(signerId, pub, receiverId, BigInt(ak.nonce) + 1n, actions, baseDecode(block.header.hash));
   const hash = new Uint8Array(await crypto.subtle.digest("SHA-256", encodeTransaction(tx)));
   const signed = new SignedTransaction({ transaction: tx, signature: new Signature({ keyType: pub.keyType, data: kp.sign(hash).signature }) });
-  const outcome = await nearRpc.sendTransactionUntil(signed, "FINAL");
+  const outcome = await sendAndWait(signed, tx.signerId);
   return { failure: nearFailure(outcome), hash: outcome?.transaction?.hash };
 }
 
@@ -416,7 +445,7 @@ async function agentRequestSign(idx, unsignedTxHex) {
     [actionCreators.functionCall("request_sign", txBytes, AGENT_CALL_GAS, 0n)], baseDecode(block.header.hash));
   const hash = new Uint8Array(await crypto.subtle.digest("SHA-256", encodeTransaction(tx)));
   const signed = new SignedTransaction({ transaction: tx, signature: new Signature({ keyType: pub.keyType, data: kp.sign(hash).signature }) });
-  const outcome = await nearRpc.sendTransactionUntil(signed, "FINAL");
+  const outcome = await sendAndWait(signed, tx.signerId);
   const failure = nearFailure(outcome);
   if (failure) return { ok: false, reason: failure, nearTx: outcome?.transaction?.hash };
   return { ok: true, sig: getTransactionLastResult(outcome), nearTx: outcome?.transaction?.hash };
