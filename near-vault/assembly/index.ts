@@ -211,16 +211,11 @@ function selfId(): Uint8Array { current_account_id(REG); return readRegister(); 
 /// function-call key restricted to <vault>.request_sign (no allowance cap; the balance is the cap).
 export function configure(): void {
   if (sget("owner") != null) { fail("already configured"); return; }
-  // owner = the caller; when the vault configures itself during setup, the owner is its parent
-  // account (vault.alice.testnet → alice.testnet)
+  // owner = the caller, unless the vault configures itself during setup (deployed with a temporary
+  // key that the same transaction deletes): then the owner is named at the end of the arguments.
   const caller = predecessor();
-  const me = selfId();
-  if (eq(caller, me)) {
-    let dot = -1;
-    for (let i = 0; i < me.length; i++) if (me[i] == 0x2e) { dot = i; break; }
-    if (dot < 0) { fail("vault must be a sub-account"); return; }
-    sset("owner", me.slice(dot + 1));
-  } else sset("owner", caller);
+  const selfSetup = eq(caller, selfId());
+  if (!selfSetup) sset("owner", caller);
 
   const a = readInput();
   let p = 0;
@@ -258,6 +253,12 @@ export function configure(): void {
     // is the real spending cap, and the key still can only call request_sign.
     promise_batch_action_add_key_with_function_call(pr, 33, ptr(pk), 0, ptr(noAllowance),
       <u64>self.length, ptr(self), <u64>methods.length, ptr(methods));
+  }
+  if (selfSetup) {
+    if (p >= a.length) { fail("self-setup needs an owner"); return; }
+    const ol = <i32>a[p]; p += 1;
+    if (ol < 2 || ol > 64 || p + ol != a.length) { fail("bad owner"); return; }
+    sset("owner", a.slice(p, p + ol)); p += ol;
   }
   if (p != a.length) { fail("trailing config bytes"); return; }
   const nb = new Uint8Array(1); nb[0] = <u8>n; sset("n", nb);

@@ -26,6 +26,15 @@ const NETS = {
   mainnet: { mpc: "v1.signer", rpcs: ["https://free.rpc.fastnear.com", "https://rpc.mainnet.near.org"], suffix: ".near", explorer: "https://nearblocks.io" },
 };
 const MPC_CONTRACT = NETS[NET].mpc;
+// Account registrar: creates top-level accounts with a given key (testnet: "testnet", mainnet: "near").
+// Used so the vault can be deployed without asking the wallet to deploy code or add a full-access key.
+const REGISTRAR = NET === "mainnet" ? "near" : "testnet";
+// ssvault-alice.testnet for alice.testnet (dots in the owner name become dashes)
+function vaultIdFor(owner) {
+  const suffix = NETS[NET].suffix;
+  const base = owner.endsWith(suffix) ? owner.slice(0, -suffix.length) : owner;
+  return `ssvault-${base.replace(/\./g, "-")}${suffix}`.toLowerCase();
+}
 // settlement through NEAR Intents (mainnet): the vault pays sellers in wNEAR from its Intents balance
 const INTENTS = "intents.near";
 const SETTLE_TOKEN = "wrap.near";
@@ -126,7 +135,7 @@ async function connectNear() {
 
 async function onNear(id) {
   state.accountId = id;
-  state.vaultId = `vault.${id}`;
+  state.vaultId = vaultIdFor(id);
   $("nearInfo").innerHTML = `Connected as <code>${id}</code>`;
   $("btnNear").hidden = true;
   $("btnNearOut").hidden = false;
@@ -190,7 +199,8 @@ function vaultConfigBytes() {
     const name = [...new TextEncoder().encode(state.agents[i].name.toLowerCase())];
     return [name.length, ...name, ...k.getPublicKey().data];
   });
-  return new Uint8Array([...auction, fee.length, ...fee, gas.length, ...gas, state.agentKeys.length, ...agents]);
+  const owner = [...new TextEncoder().encode(state.accountId)];
+  return new Uint8Array([...auction, fee.length, ...fee, gas.length, ...gas, state.agentKeys.length, ...agents, owner.length, ...owner]);
 }
 
 const enc8 = (t) => new TextEncoder().encode(t);
@@ -286,17 +296,16 @@ async function settleAuction() {
   busy(btn, false); updateUi();
 }
 
-// Helper for the always-on market bot (market/bot.mjs): the owner creates market.<owner> with the
+// Helper for the always-on market bot (market/bot.mjs): the owner creates ssmarket-<owner> with the
 // bot's public key as its full-access key. Opened with ?botkey=ed25519:... (testnet only).
 async function createBotAccount() {
   const key = new URLSearchParams(location.search).get("botkey");
   if (!key || NET !== "testnet") return;
-  const id = `market.${state.accountId}`;
-  if (!confirm(`Create ${id} with 10 testnet NEAR for the market bot, with full-access key ${key}?`)) return;
+  const id = `ssmarket-${state.accountId.replace(/\.testnet$/, "").replace(/\./g, "-")}.testnet`;
+  if (!confirm(`Create ${id} with 10 testnet NEAR for the market bot (its key: ${key})?`)) return;
   try {
-    await state.wallet.signAndSendTransaction({ receiverId: id, actions: [
-      actionCreators.createAccount(), actionCreators.transfer(10n * NEAR),
-      actionCreators.addKey(PublicKey.fromString(key), actionCreators.fullAccessKey()),
+    await state.wallet.signAndSendTransaction({ receiverId: REGISTRAR, actions: [
+      actionCreators.functionCall("create_account", new TextEncoder().encode(JSON.stringify({ new_account_id: id, new_public_key: key })), 100n * TGAS, 10n * NEAR),
     ] });
     log(`${id} created for the market bot.`, "ok");
   } catch (e) { log("Bot account creation failed: " + errMsg(e), "err"); }
@@ -342,14 +351,13 @@ async function createVault() {
     } else {
       temp = KeyPair.fromRandom("ed25519");
       try { localStorage.setItem(skey, temp.toString()); } catch (_) {}
-      log(`Step 1/2: Meteor creates ${state.vaultId} with ${Number(VAULT_DEPOSIT / NEAR)} NEAR and a temporary setup key.`);
+      if (state.vaultId.length > 58) throw new Error("Account name too long for a vault; use a shorter account.");
+      log(`Step 1/2: the ${REGISTRAR} account registrar creates ${state.vaultId} with ${Number(VAULT_DEPOSIT / NEAR)} NEAR and a temporary setup key that this page holds (deleted in step 2).`);
       await state.wallet.signAndSendTransaction({
-        receiverId: state.vaultId,
-        actions: [
-          actionCreators.createAccount(),
-          actionCreators.transfer(VAULT_DEPOSIT),
-          actionCreators.addKey(temp.getPublicKey(), actionCreators.fullAccessKey()),
-        ],
+        receiverId: REGISTRAR,
+        actions: [actionCreators.functionCall("create_account",
+          new TextEncoder().encode(JSON.stringify({ new_account_id: state.vaultId, new_public_key: temp.getPublicKey().toString() })),
+          100n * TGAS, VAULT_DEPOSIT)],
       });
     }
     busy(btn, false); busy(btn, true, "Deploying the vault…");

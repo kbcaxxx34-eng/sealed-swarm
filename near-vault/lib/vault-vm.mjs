@@ -63,7 +63,7 @@ export function makeVm({ accountId = "vault.owner.testnet", wasm = VAULT_WASM } 
 }
 
 /// Builds the binary configure() arguments.
-export function configArgs({ auction, maxFee = 50_000_000_000n, maxGas = 3_000_000n, agents }) {
+export function configArgs({ auction, maxFee = 50_000_000_000n, maxGas = 3_000_000n, agents, owner }) {
   const be = (v) => { let h = v.toString(16); if (h.length % 2) h = "0" + h; return [...hexToBytes("0x" + h)]; };
   const f = be(maxFee), g = be(maxGas);
   const out = [...hexToBytes(auction), f.length, ...f, g.length, ...g, agents.length];
@@ -71,6 +71,7 @@ export function configArgs({ auction, maxFee = 50_000_000_000n, maxGas = 3_000_0
     const name = [...new TextEncoder().encode(a.name)];
     out.push(name.length, ...name, ...a.publicKey);
   }
+  if (owner) { const o = [...new TextEncoder().encode(owner)]; out.push(o.length, ...o); }
   return new Uint8Array(out);
 }
 

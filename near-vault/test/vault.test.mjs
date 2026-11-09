@@ -147,13 +147,15 @@ test("rejects malformed transactions", () => {
   expectPanic(() => vm.call("request_sign", { input: legacy, predecessor: s }), "EIP-1559");
 });
 
-test("self-configured vault (temporary key, deleted at setup): owner is the parent account", () => {
+test("self-configured vault (temporary key, deleted at setup): owner named in the arguments", () => {
   const vm = makeVm({ accountId: VAULT });
-  vm.call("configure", { input: configArgs({ auction: AUCTION, agents: AGENTS }), predecessor: VAULT });
-  assert.equal(JSON.parse(vm.call("get_config").ret).owner, "owner.testnet");
-  vm.call("pause", { input: new Uint8Array([1]), predecessor: "owner.testnet" });
-  vm.call("pause", { input: new Uint8Array([0]), predecessor: VAULT });
+  expectPanic(() => vm.call("configure", { input: configArgs({ auction: AUCTION, agents: AGENTS }), predecessor: VAULT }), "needs an owner");
+  vm.call("configure", { input: configArgs({ auction: AUCTION, agents: AGENTS, owner: "alice.testnet" }), predecessor: VAULT });
+  assert.equal(JSON.parse(vm.call("get_config").ret).owner, "alice.testnet");
+  vm.call("pause", { input: new Uint8Array([1]), predecessor: "alice.testnet" });
   expectPanic(() => vm.call("pause", { input: new Uint8Array([1]), predecessor: "mallory.testnet" }), "only the owner");
+  // an outside caller cannot smuggle an owner field
+  expectPanic(() => makeVm({ accountId: VAULT }).call("configure", { input: configArgs({ auction: AUCTION, agents: AGENTS, owner: "mallory.testnet" }), predecessor: "owner.testnet" }), "trailing");
 });
 
 const USDC = "17208628f84f5d6ad33f0da3bbbeb27ffcb398eac501a31bd6ad2011e36133a1";

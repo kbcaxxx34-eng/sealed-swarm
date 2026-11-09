@@ -111,7 +111,7 @@
     <div class="envelope" aria-label="Example: what the chain sees of a bid">
       <span class="stamp">sealed</span>
       <div class="to">What the chain sees of a bid from</div>
-      <div class="who">nova.vault.anderssonm.testnet</div>
+      <div class="who">nova.ssvault-anderssonm.testnet</div>
       <div class="cipher">0x8f3c41d0a9e27b55c1e04f6d93a7b2e1 88c0fd4a17e6b3092d5ac7f1e0b9643a 51de…</div>
       <div class="foot">Value: encrypted. Compared with the other bids without being decrypted.</div>
     </div>
@@ -129,7 +129,7 @@
 
   <section>
     <h2><span class="n">2</span>Your swarm vault on NEAR</h2>
-    <p class="intro">A NEAR contract you own. Each agent is a NEAR sub-account of the vault (<code>atlas.vault.you.testnet</code>, …) whose only key can call <code>request_sign</code> on the vault, nothing else. The vault checks every request against your policy (approved auction contract, <code>placeBid</code>/<code>joinPool</code>/<code>submitPool</code> only, no ETH, gas caps, one entry per auction) and only then asks the NEAR MPC network to sign for that agent's Ethereum address. You can pause every agent at once.</p>
+    <p class="intro">A NEAR contract you own. Each agent is a NEAR sub-account of the vault (<code>atlas.ssvault-you.testnet</code>, …) whose only key can call <code>request_sign</code> on the vault, nothing else. The vault checks every request against your policy (approved auction contract, <code>placeBid</code>/<code>joinPool</code>/<code>submitPool</code> only, no ETH, gas caps, one entry per auction) and only then asks the NEAR MPC network to sign for that agent's Ethereum address. You can pause every agent at once.</p>
     <div class="row" style="margin-bottom:10px">
       <span>Vault: <code id="vaultId">-</code></span>
       <span id="vaultStatus" class="mut">not created</span>

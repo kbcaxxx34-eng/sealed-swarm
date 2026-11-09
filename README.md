@@ -45,8 +45,8 @@ npm run test:all     # 18 auction + pool tests (FHE mock) and 14 vault tests (wa
 
 You need the Meteor Wallet extension on **testnet** with a funded `.testnet` account, and MetaMask on Sepolia with a little test ETH. Optional: a NEAR AI Cloud API key from https://cloud.near.ai.
 
-1. Open https://sealedbid.lercomigo.space/swarm/ and **connect Meteor**. → The page shows your vault id `vault.<you>.testnet` and the three agents' Ethereum addresses, derived from the vault.
-2. **Create vault** (one Meteor approval). → `vault.<you>.testnet` is deployed and creates `atlas.`, `nova.` and `quill.vault.<you>.testnet`.
+1. Open https://sealedbid.lercomigo.space/swarm/ and **connect Meteor**. → The page shows your vault id `ssvault-<you>.testnet` and the three agents' Ethereum addresses, derived from the vault.
+2. **Create vault** (one Meteor approval). The wallet only asks the account registrar to create the vault account with a key this page generates; the page then deploys the vault, configures it and deletes that key in the same transaction, so the vault ends up with no keys at all. → `ssvault-<you>.testnet` is deployed and creates `atlas.`, `nova.` and `quill.ssvault-<you>.testnet`.
 3. **Fund agents** (MetaMask). → Each agent address gets 0.004 Sepolia ETH for gas.
 4. **Create an auction** (MetaMask), e.g. *8x H100 · 1 hour*, 5 minutes, reserve 100.
 5. **Agents appraise** (paste a NEAR AI key to use LLMs). → Each card shows a private valuation and the model's one-line reason; the *verification* panel lists the TEE attestation checks.
