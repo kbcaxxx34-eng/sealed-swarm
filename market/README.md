@@ -13,7 +13,7 @@ export STATE_FILE=/var/lib/sealedswarm-market/state.json NEAR_OWNER=market.<you>
 node bot.mjs init      # prints the bot's NEAR public key and Sepolia operator address
 ```
 
-1. Create `market.<you>.testnet` with that public key as a full-access key. The app does it in one approval: open `https://sealedbid.lercomigo.space/swarm/?botkey=<public key>` and connect Meteor.
+1. `node bot.mjs create-owner` creates `$NEAR_OWNER` (e.g. `ssmarket-alice.testnet`) through the NEAR testnet helper, funded with free testnet NEAR, with the bot's key.
 2. Send Sepolia test ETH to the operator address (it pays for auctions, close/reveal and tops up the agents).
 3. `node bot.mjs setup` creates `vault.market.<you>.testnet` and the agent sub-accounts.
 4. `node bot.mjs round` runs one round; `node bot.mjs run` runs forever.

@@ -24,9 +24,8 @@ import { createPublicClient, createWalletClient, http, encodeFunctionData, parse
 import { privateKeyToAccount, generatePrivateKey } from "viem/accounts";
 import { sepolia } from "viem/chains";
 import { KeyPair } from "@near-js/crypto";
-import { JsonRpcProvider, FailoverRpcProvider } from "@near-js/providers";
 import { actionCreators, createTransaction, encodeTransaction, SignedTransaction, Signature } from "@near-js/transactions";
-import { baseDecode, getTransactionLastResult } from "@near-js/utils";
+import { baseDecode, baseEncode, getTransactionLastResult } from "@near-js/utils";
 import { contracts, chainAdapters, utils } from "chainsig.js";
 import { createInstance, SepoliaConfig } from "@zama-fhe/relayer-sdk/node";
 
@@ -69,7 +68,24 @@ const saveJson = (f, v) => { fs.writeFileSync(f + ".tmp", JSON.stringify(v, null
 
 // ------------------------------------------------------------------ clients
 const publicClient = createPublicClient({ chain: sepolia, transport: http(SEPOLIA_RPC) });
-const nearRpc = new FailoverRpcProvider([new JsonRpcProvider({ url: "https://rpc.testnet.near.org" }), new JsonRpcProvider({ url: "https://test.rpc.fastnear.com" })]);
+const RPCS = ["https://test.rpc.fastnear.com", "https://rpc.testnet.near.org"];
+// direct JSON-RPC (MPC calls outlast RPC timeouts, so: send_tx until INCLUDED, then poll until FINAL)
+async function rpc(method, params) {
+  let last;
+  for (let attempt = 0; attempt < 4; attempt++) {
+    for (const url of RPCS) {
+      try {
+        const r = await (await fetch(url, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ jsonrpc: "2.0", id: 1, method, params }) })).json();
+        if (r.result !== undefined) return r.result;
+        last = JSON.stringify(r.error || {});
+        if (!/TIMEOUT|Timeout|UNKNOWN_TRANSACTION/i.test(last)) throw Object.assign(new Error(last.slice(0, 400)), { fatal: true });
+      } catch (e) { if (e.fatal) throw e; last = e.message; }
+    }
+    await sleep(2000);
+  }
+  throw new Error("NEAR RPC: " + String(last).slice(0, 300));
+}
+const nearRpc = { query: (p) => rpc("query", p), block: (p) => rpc("block", p) };
 const evm = new chainAdapters.evm.EVM({ publicClient, contract: new contracts.ChainSignatureContract({ networkId: "testnet", contractId: MPC }) });
 
 function state() {
@@ -89,8 +105,18 @@ async function nearSend(signerId, keyStr, receiverId, actions) {
   const tx = createTransaction(signerId, pub, receiverId, BigInt(ak.nonce) + 1n, actions, baseDecode(block.header.hash));
   const hash = new Uint8Array(await crypto.subtle.digest("SHA-256", encodeTransaction(tx)));
   const signed = new SignedTransaction({ transaction: tx, signature: new Signature({ keyType: pub.keyType, data: kp.sign(hash).signature }) });
-  const outcome = await nearRpc.sendTransactionUntil(signed, "FINAL");
-  return { outcome, hash: outcome?.transaction?.hash, failure: nearFailure(outcome) };
+  const b64 = Buffer.from(signed.encode()).toString("base64");
+  const txHash = baseEncode(hash);
+  try { await rpc("send_tx", { signed_tx_base64: b64, wait_until: "INCLUDED" }); }
+  catch (e) { if (!/TIMEOUT|Timeout/.test(e.message)) return { outcome: null, hash: txHash, failure: e.message }; }
+  for (let i = 0; i < 40; i++) {
+    try {
+      const outcome = await rpc("tx", { tx_hash: txHash, sender_account_id: signerId, wait_until: "FINAL" });
+      if (outcome?.status) return { outcome, hash: txHash, failure: nearFailure(outcome) };
+    } catch (_) {}
+    await sleep(3000);
+  }
+  return { outcome: null, hash: txHash, failure: "not final after 2 minutes" };
 }
 
 function nearFailure(outcome) {
@@ -130,6 +156,29 @@ Seller / operator Sepolia address (send it test ETH; it also tops up the agents)
 `);
 }
 
+// Creates the bot's own testnet owner account through the NEAR testnet helper (funded with testnet
+// NEAR for free). Testnet only.
+async function createOwner() {
+  const s = state();
+  if (!OWNER) throw new Error("set NEAR_OWNER, e.g. ssmarket-<name>.testnet");
+  const pub = KeyPair.fromString(s.ownerKey).getPublicKey().toString();
+  const res = await fetch("https://helper.nearprotocol.com/account", { method: "POST", headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ newAccountId: OWNER, newAccountPublicKey: pub }) });
+  log("helper:", res.status, (await res.text()).slice(0, 300));
+}
+
+async function nearBalance(id) { try { return BigInt((await nearRpc.query({ request_type: "view_account", finality: "final", account_id: id })).amount); } catch { return 0n; } }
+
+// agents pay their own NEAR gas; a request_sign prepays 300 Tgas (~0.3 testnet NEAR, mostly refunded)
+async function topUpAgentsNear(s) {
+  for (const a of AGENTS) {
+    if ((await nearBalance(agentAccount(a))) < 600_000_000_000_000_000_000_000n) {
+      const r = await nearSend(OWNER, s.ownerKey, agentAccount(a), [actionCreators.transfer(NEAR)]);
+      log("topped up", agentAccount(a), r.failure || "1 NEAR");
+    }
+  }
+}
+
 async function setup() {
   const s = state();
   if (!CONTRACT || !OWNER) throw new Error("set AUCTION_CONTRACT and NEAR_OWNER");
@@ -145,6 +194,8 @@ async function setup() {
   ]);
   if (r.failure) throw new Error("vault setup failed: " + r.failure);
   log("vault created", vaultId(), EXPLORER.near + r.hash);
+  await sleep(3000);
+  await topUpAgentsNear(s);
 }
 
 async function agentAddress(a) { return (await evm.deriveAddressAndPublicKey(vaultId(), `sealedswarm-agent-${AGENTS.indexOf(a) + 1}`)).address; }
@@ -208,6 +259,7 @@ async function round() {
 
   const addrs = await Promise.all(AGENTS.map(agentAddress));
   await topUp(s, wallet, addrs);
+  await topUpAgentsNear(s);
 
   // 1. seller opens the auction
   let hash = await write("createAuction", [lot.item, BigInt(AUCTION_MIN * 60), BigInt(lot.reserve)]);
@@ -301,7 +353,7 @@ async function run() {
 }
 
 const cmd = process.argv[2];
-const cmds = { init, show: async () => show(), setup, round, run };
-if (!cmds[cmd]) { console.log("usage: node bot.mjs init|show|setup|round|run"); process.exit(1); }
+const cmds = { init, show: async () => show(), "create-owner": createOwner, setup, round, run };
+if (!cmds[cmd]) { console.log("usage: node bot.mjs init|show|create-owner|setup|round|run"); process.exit(1); }
 await cmds[cmd]();
 if (cmd !== "run") process.exit(0);
