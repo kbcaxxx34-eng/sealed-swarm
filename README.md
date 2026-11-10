@@ -38,7 +38,7 @@ What is real in the simulation: the auction contract (same Solidity as on Sepoli
 Run all the tests:
 
 ```bash
-npm run test:all     # 18 auction + pool tests (FHE mock) and 14 vault tests (wasm)
+npm run test:all     # 18 auction + pool tests (FHE mock) and 15 vault tests (wasm)
 ```
 
 ## Try the live app (NEAR testnet + Sepolia)
@@ -136,7 +136,7 @@ The agents' NEAR-side calls (`request_sign` from each agent sub-account to the v
 |---|---|
 | `contracts/SealedSwarmAuction.sol` | FHE second-price auction with encrypted buyer pools |
 | `test/` | 18 tests on the Zama FHE mock |
-| `near-vault/` | SwarmVault NEAR contract, its 14 tests and a wasm VM harness (`lib/vault-vm.mjs`) |
+| `near-vault/` | SwarmVault NEAR contract, its 15 tests and a wasm VM harness (`lib/vault-vm.mjs`) |
 | `simulation/market.sim.ts` | `npm run simulate`: 20 agents, 5 vaults, 5 auctions, pools, Intents settlement, rogue agents |
 | `app/` | Front end (Vite): Meteor, Chain Signatures, Zama relayer SDK, NEAR AI Cloud |
 | `market/` | Always-on market bot (Node) and its public dashboard |

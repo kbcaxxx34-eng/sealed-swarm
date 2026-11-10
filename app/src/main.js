@@ -191,7 +191,8 @@ async function initNear() {
 
 async function connectNear() {
   try {
-    if (!window.meteorCom && !window.meteorWallet) throw new Error("Meteor Wallet extension not found. Install it and reload.");
+    // No extension (e.g. on a phone): the Meteor module falls back to its web wallet in a new tab.
+    if (!window.meteorCom && !window.meteorWallet) log("Meteor extension not found: opening the Meteor web wallet…");
     state.wallet = await state.selector.wallet("meteor-wallet");
     const accs = await state.wallet.signIn({ contractId: MPC_CONTRACT, methodNames: [] });
     const id = accs?.[0]?.accountId || (await state.wallet.getAccounts())[0]?.accountId;
