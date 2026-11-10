@@ -6,7 +6,7 @@
     "node": ">=20",
     "npm": ">=7.0.0"
   },
-  "license": "MIT",
+  "license": "BUSL-1.1",
   "homepage": "https://sealedbid.lercomigo.space/swarm/",
   "repository": {
     "type": "git",

@@ -2,7 +2,7 @@
   "name": "swarm-vault",
   "version": "1.0.0",
   "description": "SealedSwarm NEAR vault: policy-enforced Chain Signatures for AI bidding agents",
-  "license": "MIT",
+  "license": "BUSL-1.1",
   "scripts": {
     "build": "asc assembly/index.ts -o build/swarm_vault.wasm --optimize --runtime stub --use abort=assembly/index/abortHandler --disable bulk-memory,sign-extension,nontrapping-f2i,mutable-globals",
     "test": "node test/vault.test.mjs"

@@ -157,4 +157,4 @@ Built with AI pair-programming assistance (Claude).
 
 ## License
 
-MIT (see [LICENSE](LICENSE)). Files from the Zama template keep their BSD-3-Clause-Clear license ([LICENSE-zama-template](LICENSE-zama-template)).
+Business Source License 1.1 (see [LICENSE](LICENSE)). The source is public and free to run, test, study and evaluate, including on testnets and for judging the NEAR HACKATHON 2026; other production use needs a commercial license from the author. On 2030-11-10 it converts to Apache-2.0. Files from the Zama template keep their BSD-3-Clause-Clear license ([LICENSE-zama-template](LICENSE-zama-template)).

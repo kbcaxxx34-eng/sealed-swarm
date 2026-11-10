@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: BUSL-1.1
 pragma solidity ^0.8.24;
 
 import {FHE, ebool, euint64, externalEuint64, eaddress} from "@fhevm/solidity/lib/FHE.sol";
