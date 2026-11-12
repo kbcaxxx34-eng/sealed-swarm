@@ -16,7 +16,7 @@ SealedSwarm fixes both:
 
 Built at **NEAR HACKATHON 2026**. Tracks: **AI Swarms**, **Privacy & Private AI**, **AI Security & Defense**, **Agent Economy**. Testnet prototype, not audited.
 
-- Live market (8 agents from two labs' vaults trading on testnet every 3 hours since 10 Nov, paying in wNEAR on NEAR): https://sealedbid.lercomigo.space/swarm/market/ — *Verify every round in my browser* rechecks the whole market from public nodes, and *Try to cheat* forges a round's claims and shows the checks refusing them
+- Live market (8 agents from two labs' vaults buying from 5 GPU sellers on testnet every 3 hours since 10 Nov, paying in wNEAR on NEAR, with a real NEAR Intents quote for each payment): https://sealedbid.lercomigo.space/swarm/market/ — *Verify every round in my browser* rechecks the whole market from public nodes, and *Try to cheat* forges a round's claims and shows the checks refusing them
 - Live app: https://sealedbid.lercomigo.space/swarm/
 - Rules enforced by the code: [RULES.md](RULES.md) · Simulation report: [simulation/REPORT.md](simulation/REPORT.md)
 
@@ -53,7 +53,7 @@ cd verify && npm ci && npm run verify # 3. recheck the live deployment on-chain
 | `npm run simulate` | 5 GPU auctions, 20 agents from 5 owners' vaults, an encrypted buyer pool winning lot #5, every winner settling through the vault's NEAR Intents path (simulated), **29 approved / 10 refused** transactions (prompt-injected agents trying to send ETH to an attacker, call a look-alike contract, call `close()`, bid twice, bid while paused, pay a non-allowlisted seller), and `every result matches a plaintext computation`. Report written to `simulation/REPORT.md`. |
 | `npm run verify` | 100+ `PASS` lines (174 on 12 Nov; more with every market round) and `0 failed`: the checks in the table below, rerun live against the chains. Writes `verify/REPORT.md`. |
 
-**What the fuzz test found.** Run against the vault code deployed on 11 Nov (v2), the fuzz test found one gap within its first 500 requests: an agent that had placed a solo bid could get a `submitPool` signed, because the vault checked that the agent had entered the auction, not that it had joined a pool. The auction contract still refuses that transaction on Sepolia (only a pool's creator can submit it), so the worst case is gas within the owner's caps. The current source fixes it (`[V3] an agent that bid alone cannot submit a pool`); the live v2 vaults keep their deployed code, because a vault with no keys cannot be upgraded — which is the point.
+**What the fuzz test found.** Run against the vault code deployed on 11 Nov (v2), the fuzz test found one gap within its first 500 requests: an agent that had placed a solo bid could get a `submitPool` signed, because the vault checked that the agent had entered the auction, not that it had joined a pool. The auction contract still refuses that transaction on Sepolia (only a pool's creator can submit it), so the worst case is gas within the owner's caps. The source fixes it (`[V3] an agent that bid alone cannot submit a pool`). A vault with no keys cannot be upgraded — which is the point — so on 12 Nov the market moved to new vaults (`fleet.*`) deployed from the fixed code; the v2 vaults keep theirs.
 
 Prefer not to run anything? The [CI](https://github.com/kbcaxxx34-eng/sealed-swarm/actions/workflows/main.yml) runs all three on every push and every day, and commits the result to [verify/REPORT.md](verify/REPORT.md).
 
@@ -61,7 +61,7 @@ Prefer not to run anything? The [CI](https://github.com/kbcaxxx34-eng/sealed-swa
 
 | Claim | How it is checked |
 |---|---|
-| The vault code on NEAR is exactly this repo's code | `code_hash` of the live vaults `swarm.ssmarket-anderssonm.testnet` and `swarm.lab2.ssmarket-anderssonm.testnet` = base58(sha256(`near-vault/build/swarm_vault_v2.wasm`)) = `bwL6ttS5…ThaWW`, the build of commit 8a823d2; the v1 vaults (first market rounds) run `swarm_vault_v1.wasm`, the build of commit 645f32f. CI checks both files against those commits, and rebuilds the current `swarm_vault.wasm` from source byte for byte |
+| The vault code on NEAR is exactly this repo's code | `code_hash` of the live vaults `fleet.ssmarket-anderssonm.testnet` and `fleet.lab2.ssmarket-anderssonm.testnet` = base58(sha256(`near-vault/build/swarm_vault.wasm`)) = `5MJgn3dS…AAK26`, and CI rebuilds that wasm from source byte for byte. Vaults of earlier rounds keep the code they were deployed with: `swarm.*` (11–12 Nov) run `swarm_vault_v2.wasm` (commit 8a823d2), the first vaults run `swarm_vault_v1.wasm` (commit 645f32f); CI checks both files against those commits |
 | Nobody can change or drain the vaults | Every vault account holds **0 access keys** |
 | An agent can only ask its own vault | Each agent sub-account's only key is a function-call key: receiver = its vault, methods = `request_sign` and `settle` (v1: `request_sign` only), nothing else |
 | The vault's policy is the one described | `get_config`: auction contract `0x4994…78cc`, MPC `v1.signer-prod.testnet`, gas and fee caps, not paused |
@@ -85,11 +85,12 @@ Encrypted computation needs Zama's FHE coprocessor, which runs on Ethereum (Sepo
 | AI Swarms brief | SealedSwarm |
 |---|---|
 | A swarm of agents buying GPU compute together | 8 agents from two labs on the live market, 20 in the simulation, buying GPU-hour lots; agents that can't afford a lot alone form a buyer pool, across labs |
-| One NEAR sub-account per agent | `atlas.`, `nova.`, `quill.`, `orion.swarm.ssmarket-anderssonm.testnet` and `lyra.`, `kai.`, `vega.`, `juno.swarm.lab2.ssmarket-anderssonm.testnet`, created by each vault's `configure` |
+| One NEAR sub-account per agent | `atlas.`, `nova.`, `quill.`, `orion.fleet.ssmarket-anderssonm.testnet` and `lyra.`, `kai.`, `vega.`, `juno.fleet.lab2.ssmarket-anderssonm.testnet`, created by each vault's `configure` |
 | A coordinator with written rules | The vault contract is the coordinator; its rules are in [RULES.md](RULES.md) and enforced on-chain |
 | A simulation with many buyers and sellers | `npm run simulate`: 20 agents, 5 owners, 5 lots |
 | A live page | https://sealedbid.lercomigo.space/swarm/market/ |
-| Settlement on NEAR | Live every round on testnet in wNEAR (`settle` → NEP-141 `ft_transfer`); the same `settle` uses NEAR Intents (`mt_transfer` on `intents.near`) on mainnet |
+| A sealed-bid round against seller agents | Five GPU providers (fictional: Northwind GPU, Ember Compute, Tessera Cloud, Kestrel Labs, Baobab Compute) open lots in turn, each from its own Sepolia account, and are paid on their own NEAR account |
+| Settlement via NEAR Intents, each buyer pays its share | Live every round on testnet in wNEAR (`settle` → NEP-141 `ft_transfer`; each pool member pays its share), plus a real NEAR Intents 1Click quote (dry run, no funds move) for delivering that payment to the seller in the asset and on the chain it wants (USDC on Base, USDC on Arbitrum, …) to its address derived from its NEAR account. On mainnet the same `settle` pays through NEAR Intents (`mt_transfer` on `intents.near`); Intents has no testnet, and the organizers suggest dry-run quotes for it |
 
 | Privacy brief | SealedSwarm |
 |---|---|

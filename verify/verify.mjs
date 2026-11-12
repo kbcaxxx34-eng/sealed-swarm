@@ -356,6 +356,12 @@ async function main() {
         record(sec, "winner paid the seller in wNEAR on NEAR, through its vault", sum === BigInt(round.price), `${parts.join(" + ")} wNEAR = price ${round.price} units → ${round.payments[0].seller} (transfers logged by the token contract in ${round.payments.length} NEAR txs)`);
       });
     }
+    // NEAR Intents quote (dry run): it must quote exactly the clearing price, to the round's seller
+    if (round.intents) {
+      const q = round.intents;
+      record(sec, "NEAR Intents quote is for exactly the price paid", BigInt(q.amountIn) === BigInt(round.price) * UNIT && q.origin === "nep141:wrap.near" && q.dry === true,
+        `1Click dry-run quote: ${q.amountInFormatted} wNEAR (= price ${round.price} units) → ${q.amountOutFormatted} ${q.symbol} on ${q.chain} for ${round.seller?.name ?? "the seller"}, ~${q.timeEstimate}s, quoted ${q.quotedAt}`);
+    }
     // 11: TEE proofs of the agents' decisions
     if (round.ai?.proofs) {
       await guard(sec, "agent decisions were made in an attested TEE (NEAR AI Cloud)", async () => {
