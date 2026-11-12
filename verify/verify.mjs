@@ -133,6 +133,19 @@ function mpcSignature(tx) {
   return { r: "0x" + s.big_r.affine_point.slice(2), s: "0x" + s.s.scalar, yParity: s.recovery_id };
 }
 const logsOf = (tx) => (tx.receipts_outcome || []).flatMap((r) => r.outcome.logs);
+// the token transfer as logged by the token contract itself: a NEP-141 event, or the legacy
+// "Transfer <amount> from <a> to <b>" line that wrap.testnet writes
+function tokenTransfer(tx, token) {
+  for (const r of tx.receipts_outcome || []) {
+    if (r.outcome.executor_id !== token || !("SuccessValue" in r.outcome.status)) continue;
+    for (const l of r.outcome.logs) {
+      if (l.startsWith("EVENT_JSON:")) { const e = JSON.parse(l.slice(11)); if (e.standard === "nep141" && e.event === "ft_transfer") return e.data[0]; }
+      const m = l.match(/^Transfer (\d+) from (\S+) to (\S+)$/);
+      if (m) return { amount: m[1], old_owner_id: m[2], new_owner_id: m[3] };
+    }
+  }
+  return null;
+}
 
 // Proves: NEAR vault tx → MPC signature → exactly the Sepolia tx, from the agent's derived address.
 async function proveSignedAction(section, label, nearHash, sender, ethHash, vault, agentIndex) {
@@ -301,14 +314,13 @@ async function main() {
         for (const p of round.payments) {
           const tx = await nearTx(p.near, p.agent);
           const logs = logsOf(tx);
-          const ev = logs.filter((l) => l.startsWith("EVENT_JSON:")).map((l) => JSON.parse(l.slice(11))).find((e) => e.standard === "nep141" && e.event === "ft_transfer");
-          const d = ev?.data?.[0];
+          const d = tokenTransfer(tx, configs[vaultOf(p.agent)]?.settlement_token ?? "wrap.testnet");
           const ok = d && d.old_owner_id === vaultOf(p.agent) && d.new_owner_id === p.seller && BigInt(d.amount) === BigInt(p.units) * UNIT && logs.includes("settlement confirmed") && winners.includes(p.agent);
           if (!ok) throw new Error(`payment ${p.near} by ${p.agent} does not check out: ${JSON.stringify(d ?? logs).slice(0, 200)}`);
           sum += BigInt(p.units); parts.push(`${p.agent.split(".")[0]} ${Number(p.units) / 10000}`);
           payments++;
         }
-        record(sec, "winner paid the seller in wNEAR on NEAR, through its vault", sum === BigInt(round.price), `${parts.join(" + ")} wNEAR = price ${round.price} units → ${round.payments[0].seller} (ft_transfer events on ${round.payments.length} NEAR txs)`);
+        record(sec, "winner paid the seller in wNEAR on NEAR, through its vault", sum === BigInt(round.price), `${parts.join(" + ")} wNEAR = price ${round.price} units → ${round.payments[0].seller} (transfers logged by the token contract in ${round.payments.length} NEAR txs)`);
       });
     }
     // 11: TEE proofs of the agents' decisions

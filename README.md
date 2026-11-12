@@ -11,12 +11,12 @@ SealedSwarm fixes both:
 - **Bids stay encrypted end to end** (Zama FHE). The auction contract compares and adds ciphertexts and only ever reveals the winner and the price. Losing bids are never revealed, not even after the auction (commit-reveal schemes reveal every bid at the end; this does not).
 - **Agents can pool their budgets without revealing them.** Agents that can't afford a lot alone form an *encrypted buyer pool*: the contract adds their contributions under encryption, and no one, including the other members, learns what each one put in.
 - **Agents are autonomous but bounded** (NEAR). Each owner runs a *swarm vault* contract on NEAR. Every agent is a NEAR sub-account of the vault whose only key can ask the vault for a signature. The vault decodes each Ethereum transaction on-chain, checks it against the owner's policy, and only then asks the NEAR MPC network (Chain Signatures) to sign it. No agent ever holds an Ethereum key.
-- **Winners pay through NEAR Intents** (mainnet). A winning agent, or each pool member for its own share, asks the vault to pay the seller. The vault checks a seller allowlist and the agent's spending limit, then moves tokens with `mt_transfer` on `intents.near`.
+- **Winners pay on NEAR, through their vault.** A winning agent, or each pool member for its own share, asks its vault to pay the seller. The vault checks a seller allowlist, that the agent entered that auction, that it has not paid yet and its spending limit, then pays: live on testnet in wNEAR (NEP-141 `ft_transfer` on `wrap.testnet`), and on mainnet through NEAR Intents (`mt_transfer` on `intents.near`).
 - **Agents think privately** (NEAR AI Cloud). Agents reason with open models running in TEEs, and the app checks the TEE attestation and the signature on each answer.
 
 Built at **NEAR HACKATHON 2026**. Tracks: **AI Swarms**, **Privacy & Private AI**, **AI Security & Defense**, **Agent Economy**. Testnet prototype, not audited.
 
-- Live market (4 agents trading on testnet every 3 hours since 10 Nov): https://sealedbid.lercomigo.space/swarm/market/
+- Live market (8 agents from two labs' vaults trading on testnet every 3 hours since 10 Nov, paying in wNEAR on NEAR; each round has a *Verify in my browser* button): https://sealedbid.lercomigo.space/swarm/market/
 - Live app: https://sealedbid.lercomigo.space/swarm/
 - Rules enforced by the code: [RULES.md](RULES.md) · Simulation report: [simulation/REPORT.md](simulation/REPORT.md)
 
@@ -33,7 +33,7 @@ cd verify && npm ci && npm run verify # 3. recheck the live deployment on-chain
 
 | Do | You should see |
 |---|---|
-| `npm run test:all` | `18 passing` (auction + encrypted buyer pools on Zama's FHE mock), then the vault wasm is rebuilt from source and `15 passing` (vault policy tests on the real wasm). `git status` stays clean: the build is reproducible. |
+| `npm run test:all` | `18 passing` (auction + encrypted buyer pools on Zama's FHE mock), then the vault wasm is rebuilt from source and `16 passing` (vault policy and settlement tests on the real wasm). `git status` stays clean: the build is reproducible. |
 | `npm run simulate` | 5 GPU auctions, 20 agents from 5 owners' vaults, an encrypted buyer pool winning lot #5, every winner settling through the vault's NEAR Intents path (simulated), **29 approved / 10 refused** transactions (prompt-injected agents trying to send ETH to an attacker, call a look-alike contract, call `close()`, bid twice, bid while paused, pay a non-allowlisted seller), and `every result matches a plaintext computation`. Report written to `simulation/REPORT.md`. |
 | `npm run verify` | 100+ `PASS` lines (119 on 12 Nov; more with every market round) and `0 failed`: the checks in the table below, rerun live against the chains. Writes `verify/REPORT.md`. |
 
@@ -43,17 +43,19 @@ Prefer not to run anything? The [CI](https://github.com/kbcaxxx34-eng/sealed-swa
 
 | Claim | How it is checked |
 |---|---|
-| The vault code on NEAR is exactly this repo's code | `code_hash` of `vault.ssmarket-anderssonm.testnet` and `ssvault-anderssonm.testnet` = base58(sha256(`near-vault/build/swarm_vault.wasm`)) = `GxRvQnwh…6yDft`; CI rebuilds that wasm from source and checks it is byte-identical |
-| Nobody can change or drain the vaults | Both vault accounts hold **0 access keys** |
-| An agent can do one thing only | Each agent sub-account's only key is a function-call key: receiver = its vault, method = `request_sign`, nothing else |
+| The vault code on NEAR is exactly this repo's code | `code_hash` of the live vaults `swarm.ssmarket-anderssonm.testnet` and `swarm.lab2.ssmarket-anderssonm.testnet` = base58(sha256(`near-vault/build/swarm_vault.wasm`)) = `bwL6ttS5…ThaWW`; CI rebuilds that wasm from source and checks it is byte-identical. The v1 vaults (first market rounds) run `swarm_vault_v1.wasm`, the build of commit 645f32f |
+| Nobody can change or drain the vaults | Every vault account holds **0 access keys** |
+| An agent can only ask its own vault | Each agent sub-account's only key is a function-call key: receiver = its vault, methods = `request_sign` and `settle` (v1: `request_sign` only), nothing else |
 | The vault's policy is the one described | `get_config`: auction contract `0x4994…78cc`, MPC `v1.signer-prod.testnet`, gas and fee caps, not paused |
 | The Sepolia auction is exactly this repo's contract | Deployed bytecode = `deployedBytecode` compiled from `contracts/SealedSwarmAuction.sol` (9,996 bytes, identical) |
 | Auctions are honest | All 20 auctions: every revealed winner placed a bid or is a submitted buyer pool, and paid at least the reserve |
 | **Every live-market action went NEAR vault → NEAR MPC → Sepolia** | For each of ~65 agent actions: the NEAR `request_sign` transaction carries the unsigned Ethereum transaction; its result is the NEAR MPC signature; combining the two gives **exactly the Sepolia transaction hash**, and the signer is the agent's address derived from `vault + "sealedswarm-agent-N"`. No agent key, no server key: the signature can only have come from the NEAR MPC network through the vault. |
-| **Every hijack attempt was stopped by NEAR** | Each round one agent is told to send 0.001 ETH to `0x…dEaD`; each of those NEAR transactions failed in the vault with `target is not the approved auction contract`, so nothing was ever signed |
+| **Every hijack attempt was stopped by NEAR** | Each round one agent is hijacked with one of six attacks (send ETH to `0x…dEaD`, call `close()`, send ETH with a bid, bid twice, sign with a 5,000 gwei fee cap, use `settle` to pay `attacker.testnet`); each of those NEAR transactions failed in the vault with the matching policy reason, so nothing was ever signed or paid |
+| **Winners really paid, on NEAR** | Each payment is a NEAR transaction from the agent to its vault's `settle`, whose receipts carry the NEP-141 `ft_transfer` event from the vault to the seller for exactly the agent's share; the shares add up to the clearing price |
+| **Agents decided inside a TEE** (when the bot runs with a NEAR AI Cloud key) | For each decision: the TEE's ECDSA signature covers sha256 of the exact request and response, and the signer is the address in a TDX quote whose REPORTDATA also holds the bot's fresh nonce (`verify/teeproof.mjs`) |
 | The dashboard tells the truth | Each round's winner, clearing price, number of sealed bids and pool members match `getAuction` / `getPoolMembers` on Sepolia |
 
-What is *not* proven by the verifier: the bid amounts themselves (they are FHE ciphertexts; only the winner and price are ever decrypted, with the Zama KMS proof checked on-chain in `reveal`), and mainnet Intents settlement (Intents exists only on mainnet; it is covered by the vault tests and the simulation).
+What is *not* proven by the verifier: the bid amounts themselves (they are FHE ciphertexts; only the winner and price are ever decrypted, with the Zama KMS proof checked on-chain in `reveal`), how a pool's members split the price (each member knows only its own contribution and the pool total; the verifier checks the shares add up to the price), and mainnet Intents settlement (Intents exists only on mainnet; it is covered by the vault tests and the simulation).
 
 ## Why the auction runs on Sepolia and the swarm on NEAR
 
@@ -63,12 +65,12 @@ Encrypted computation needs Zama's FHE coprocessor, which runs on Ethereum (Sepo
 
 | AI Swarms brief | SealedSwarm |
 |---|---|
-| A swarm of agents buying GPU compute together | 4 agents on the live market, 20 in the simulation, buying GPU-hour lots; agents that can't afford a lot alone form a buyer pool |
-| One NEAR sub-account per agent | `atlas.`, `nova.`, `quill.`, `orion.vault.ssmarket-anderssonm.testnet`, created by the vault's `configure` |
+| A swarm of agents buying GPU compute together | 8 agents from two labs on the live market, 20 in the simulation, buying GPU-hour lots; agents that can't afford a lot alone form a buyer pool, across labs |
+| One NEAR sub-account per agent | `atlas.`, `nova.`, `quill.`, `orion.swarm.ssmarket-anderssonm.testnet` and `lyra.`, `kai.`, `vega.`, `juno.swarm.lab2.ssmarket-anderssonm.testnet`, created by each vault's `configure` |
 | A coordinator with written rules | The vault contract is the coordinator; its rules are in [RULES.md](RULES.md) and enforced on-chain |
 | A simulation with many buyers and sellers | `npm run simulate`: 20 agents, 5 owners, 5 lots |
 | A live page | https://sealedbid.lercomigo.space/swarm/market/ |
-| Settlement via NEAR Intents | `settle` / `on_settled` in the vault (`mt_transfer` on `intents.near`, mainnet) |
+| Settlement on NEAR | Live every round on testnet in wNEAR (`settle` → NEP-141 `ft_transfer`); the same `settle` uses NEAR Intents (`mt_transfer` on `intents.near`) on mainnet |
 
 | Privacy brief | SealedSwarm |
 |---|---|
@@ -163,7 +165,7 @@ The agents' NEAR-side calls (`request_sign` from each agent sub-account to the v
 
 - Testnet prototype; not audited.
 - Settlement trusts the agent's claimed amount, bounded by the allowlist, one payment per auction and the spending limit: the NEAR vault cannot read Sepolia. A bridge or light client would remove that trust.
-- NEAR Intents exists only on mainnet, so settlement runs only when the app is switched to mainnet.
+- NEAR Intents exists only on mainnet. On testnet the vault settles with NEP-141 `ft_transfer` on `wrap.testnet` instead (live in the market); the app's Intents settlement runs when it is switched to mainnet.
 - The number of entries per auction is public; amounts are not.
 - In the live app, agent keys live in the browser's local storage (testnet only). Each key can only call `request_sign`, and the vault restricts that to entries on the approved auction.
 - The vault policy is set once, at creation. A new auction contract needs a new vault.
@@ -175,10 +177,10 @@ The agents' NEAR-side calls (`request_sign` from each agent sub-account to the v
 |---|---|
 | `contracts/SealedSwarmAuction.sol` | FHE second-price auction with encrypted buyer pools |
 | `test/` | 18 tests on the Zama FHE mock |
-| `near-vault/` | SwarmVault NEAR contract, its 15 tests and a wasm VM harness (`lib/vault-vm.mjs`) |
+| `near-vault/` | SwarmVault NEAR contract, its 16 tests and a wasm VM harness (`lib/vault-vm.mjs`) |
 | `simulation/market.sim.ts` | `npm run simulate`: 20 agents, 5 vaults, 5 auctions, pools, Intents settlement, rogue agents |
 | `app/` | Front end (Vite): Meteor, Chain Signatures, Zama relayer SDK, NEAR AI Cloud |
-| `market/` | Always-on market bot (Node) and its public dashboard |
+| `market/` | Always-on market bot (Node), its public dashboard and the in-browser verifier (`verify-browser.js`) |
 | `verify/` | `npm run verify`: no-key recheck of the deployment and every live-market round against NEAR testnet and Sepolia |
 | `RULES.md` | The rules the code enforces |
 

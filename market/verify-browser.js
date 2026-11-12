@@ -88,9 +88,19 @@ export async function proveRefusal(b) {
 export async function provePayment(p) {
   const tx = await nearTx(p.near, p.agent);
   const logs = (tx.receipts_outcome || []).flatMap((r) => r.outcome.logs);
-  const ev = logs.filter((l) => l.startsWith("EVENT_JSON:")).map((l) => JSON.parse(l.slice(11))).find((e) => e.standard === "nep141" && e.event === "ft_transfer")?.data?.[0];
-  const ok = !!ev && ev.new_owner_id === p.seller && BigInt(ev.amount) === BigInt(p.units) * 100000000000000000000n && logs.includes("settlement confirmed");
-  return { ok, text: ev ? `ft_transfer ${Number(BigInt(ev.amount) / 10n ** 20n) / 10000} wNEAR ${ev.old_owner_id} → ${ev.new_owner_id}` : "no ft_transfer event" };
+  // the transfer as logged by the token contract itself (NEP-141 event, or wrap.testnet's legacy line)
+  let ev = null;
+  for (const r of tx.receipts_outcome || []) {
+    if (r.outcome.executor_id !== "wrap.testnet" || !("SuccessValue" in r.outcome.status)) continue;
+    for (const l of r.outcome.logs) {
+      if (l.startsWith("EVENT_JSON:")) { const e = JSON.parse(l.slice(11)); if (e.standard === "nep141" && e.event === "ft_transfer") ev = e.data[0]; }
+      const m = l.match(/^Transfer (\d+) from (\S+) to (\S+)$/);
+      if (m) ev = { amount: m[1], old_owner_id: m[2], new_owner_id: m[3] };
+    }
+  }
+  const vault = p.agent.split(".").slice(1).join(".");
+  const ok = !!ev && ev.old_owner_id === vault && ev.new_owner_id === p.seller && BigInt(ev.amount) === BigInt(p.units) * 100000000000000000000n && logs.includes("settlement confirmed");
+  return { ok, text: ev ? `wrap.testnet transfer ${Number(BigInt(ev.amount) / 10n ** 20n) / 10000} wNEAR ${ev.old_owner_id} → ${ev.new_owner_id}` : "no transfer logged by wrap.testnet" };
 }
 
 // TEE proof: signature over sha256(request):sha256(response) from a signer bound to a TDX quote + nonce
