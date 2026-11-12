@@ -1,10 +1,10 @@
 # SealedSwarm verification report
 
-Generated 2026-11-12T10:38:55.201Z by `verify/verify.mjs` from public RPC only (no keys).
+Generated 2026-11-12T17:59:28.212Z by `verify/verify.mjs` from public RPC only (no keys).
 
-**245 passed, 0 failed.** 100 bids checked on Zama's ACL: none can be decrypted by anyone but its bidder. 119 agent actions traced from NEAR vault → NEAR MPC signature → Sepolia transaction; 19 hijack attempts confirmed refused on NEAR; 20 wNEAR payments confirmed on NEAR.
+**291 passed, 0 failed.** 124 bids checked on Zama's ACL: none can be decrypted by anyone but its bidder. 146 agent actions traced from NEAR vault → NEAR MPC signature → Sepolia transaction; 22 hijack attempts confirmed refused on NEAR; 27 wNEAR payments confirmed on NEAR; 6 agent decisions proven to come from an attested TEE.
 
-Market data: https://sealedbid.lercomigo.space/swarm/market/market.json (updated 2026-11-12T10:29:51.977Z).
+Market data: https://sealedbid.lercomigo.space/swarm/market/market.json (updated 2026-11-12T17:40:13.779Z).
 
 | | Section | Claim | Evidence |
 |---|---|---|---|
@@ -50,7 +50,53 @@ Market data: https://sealedbid.lercomigo.space/swarm/market/market.json (updated
 | ✅ | NEAR vault | vega.fleet.lab2.ssmarket-anderssonm.testnet: keys can only call request_sign / settle on the vault | 1 key(s), {"FunctionCall":{"allowance":null,"method_names":["request_sign","settle"],"receiver_id":"fleet.lab2.ssmarket-anderssonm.testnet"}} |
 | ✅ | NEAR vault | juno.fleet.lab2.ssmarket-anderssonm.testnet: keys can only call request_sign / settle on the vault | 1 key(s), {"FunctionCall":{"allowance":null,"method_names":["request_sign","settle"],"receiver_id":"fleet.lab2.ssmarket-anderssonm.testnet"}} |
 | ✅ | Sepolia auction | deployed bytecode = contract compiled from this repo | 9996 bytes, sha256 14c067c56dd7cd9b… on chain vs 14c067c56dd7cd9b… compiled |
-| ✅ | Sepolia auction | every revealed winner entered the auction | 27 auctions, 23 revealed (0 below reserve, no sale), every winner was a bidder or a submitted pool and paid ≥ reserve |
+| ✅ | Sepolia auction | every revealed winner entered the auction | 30 auctions, 26 revealed (0 below reserve, no sale), every winner was a bidder or a submitted pool and paid ≥ reserve |
+| ✅ | Round · auction #30 | dashboard result = on-chain result | "4x A100 · 2 hours": winner nova.fleet.ssmarket-anderssonm.testnet → 0x9125D656…9Cb8E2, price 195 (dashboard 195), 6 sealed entries |
+| ✅ | Round · auction #30 | pool #1 members are the named agents | quill + orion + vega = 0x28650C80…e7a89d, 0xA31b6E0e…253d8f, 0xa1a28D4f…5F29F0 |
+| ✅ | Round · auction #30 | every bid stays sealed: only the winner and the price are public | 8/8 bids: not publicly decryptable, decryptable only by their own bidder (Zama ACL 0xf0Ffdc93…0A433D), pool total sealed; winner + price public: true |
+| ✅ | Round · auction #30 | atlas "bid" was signed by the NEAR MPC through its vault | NEAR 4RP2HxRaf4…WkepWU → MPC sig → Sepolia 0x601854d6…f7ac0b, signer 0x059DeDeA…72b55B (derived sealedswarm-agent-1 = 0x059DeDeA…72b55B), status 0x1 |
+| ✅ | Round · auction #30 | nova "bid" was signed by the NEAR MPC through its vault | NEAR GF9gF18y2G…pRt1ct → MPC sig → Sepolia 0x31a563da…d02132, signer 0x9125D656…9Cb8E2 (derived sealedswarm-agent-2 = 0x9125D656…9Cb8E2), status 0x1 |
+| ✅ | Round · auction #30 | lyra "bid" was signed by the NEAR MPC through its vault | NEAR LkAMQd8DJQ…b5PMi4 → MPC sig → Sepolia 0xd7b4bc06…5315f1, signer 0x2ee59E09…baCFE1 (derived sealedswarm-agent-1 = 0x2ee59E09…baCFE1), status 0x1 |
+| ✅ | Round · auction #30 | kai "bid" was signed by the NEAR MPC through its vault | NEAR Hhc7psvsyz…cdnjPe → MPC sig → Sepolia 0x2e0e7271…f6c920, signer 0x8042d3ba…0a576D (derived sealedswarm-agent-2 = 0x8042d3ba…0a576D), status 0x1 |
+| ✅ | Round · auction #30 | juno "bid" was signed by the NEAR MPC through its vault | NEAR 8rHQrWGaUq…Ks64ug → MPC sig → Sepolia 0x8c7f5e74…f53561, signer 0x2368C2F3…c5Af2f (derived sealedswarm-agent-4 = 0x2368C2F3…c5Af2f), status 0x1 |
+| ✅ | Round · auction #30 | quill "opened pool" was signed by the NEAR MPC through its vault | NEAR 84gwBCiLAz…Kv45fG → MPC sig → Sepolia 0x8dfb5495…7c22d8, signer 0x28650C80…e7a89d (derived sealedswarm-agent-3 = 0x28650C80…e7a89d), status 0x1 |
+| ✅ | Round · auction #30 | orion "joined pool" was signed by the NEAR MPC through its vault | NEAR DDCRN1qCjN…wUozkJ → MPC sig → Sepolia 0xd66083c1…6e7f30, signer 0xA31b6E0e…253d8f (derived sealedswarm-agent-4 = 0xA31b6E0e…253d8f), status 0x1 |
+| ✅ | Round · auction #30 | vega "joined pool" was signed by the NEAR MPC through its vault | NEAR 6Vuzb2kvcb…GNaCur → MPC sig → Sepolia 0xada44527…63a53a, signer 0xa1a28D4f…5F29F0 (derived sealedswarm-agent-3 = 0xa1a28D4f…5F29F0), status 0x1 |
+| ✅ | Round · auction #30 | pool #1 submitted by quill was signed by the NEAR MPC through its vault | NEAR 6CNfwqmTgj…udBhqS → MPC sig → Sepolia 0xf522f315…199af4, signer 0x28650C80…e7a89d (derived sealedswarm-agent-3 = 0x28650C80…e7a89d), status 0x1 |
+| ✅ | Round · auction #30 | hijack attempt refused by the vault on NEAR | place a second bid in the same auction (signed tx to 0x4994b953…e878cc, value 0, fee cap 6.5e-8 gwei) → NEAR BrtsYKPzM6…5qLdKC: Smart contract panicked: this agent already bid on this auction |
+| ✅ | Round · auction #30 | winner paid the seller in wNEAR on NEAR, through its vault | nova 0.0195 wNEAR = price 195 units → ember.ssmarket-anderssonm.testnet (transfers logged by the token contract in 1 NEAR txs) |
+| ✅ | Round · auction #30 | NEAR Intents quote is for exactly the price paid | 1Click dry-run quote: 0.0195 wNEAR (= price 195 units) → 0.060221 USDC on arb for Ember Compute, ~11s, quoted 2026-11-12T17:40:10.664Z |
+| ✅ | Round · auction #30 | agent decisions were made in an attested TEE (NEAR AI Cloud) | 6/6 decisions by Qwen/Qwen3.6-35B-A3B-FP8: TEE signature over the exact request+response, signer bound to a TDX quote with a fresh nonce |
+| ✅ | Round · auction #29 | dashboard result = on-chain result | "8x H100 · 1 hour": winner pool #1 (quill + orion + vega) → 0xd51596DD…9522e6, price 216 (dashboard 216), 6 sealed entries |
+| ✅ | Round · auction #29 | pool #1 members are the named agents | quill + orion + vega = 0x28650C80…e7a89d, 0xA31b6E0e…253d8f, 0xa1a28D4f…5F29F0 |
+| ✅ | Round · auction #29 | every bid stays sealed: only the winner and the price are public | 8/8 bids: not publicly decryptable, decryptable only by their own bidder (Zama ACL 0xf0Ffdc93…0A433D), pool total sealed; winner + price public: true |
+| ✅ | Round · auction #29 | atlas "bid" was signed by the NEAR MPC through its vault | NEAR 3ArKxSRqgq…mZBWzZ → MPC sig → Sepolia 0x265b4e3d…1f89e1, signer 0x059DeDeA…72b55B (derived sealedswarm-agent-1 = 0x059DeDeA…72b55B), status 0x1 |
+| ✅ | Round · auction #29 | nova "bid" was signed by the NEAR MPC through its vault | NEAR CnD3DqZcLi…3VbBwk → MPC sig → Sepolia 0xb8372df3…104c51, signer 0x9125D656…9Cb8E2 (derived sealedswarm-agent-2 = 0x9125D656…9Cb8E2), status 0x1 |
+| ✅ | Round · auction #29 | lyra "bid" was signed by the NEAR MPC through its vault | NEAR EpHb75AyQ4…C88BKP → MPC sig → Sepolia 0x979400fa…450351, signer 0x2ee59E09…baCFE1 (derived sealedswarm-agent-1 = 0x2ee59E09…baCFE1), status 0x1 |
+| ✅ | Round · auction #29 | kai "bid" was signed by the NEAR MPC through its vault | NEAR DB92v73Vjg…9xD49N → MPC sig → Sepolia 0x1a0da398…857274, signer 0x8042d3ba…0a576D (derived sealedswarm-agent-2 = 0x8042d3ba…0a576D), status 0x1 |
+| ✅ | Round · auction #29 | juno "bid" was signed by the NEAR MPC through its vault | NEAR GUkSKxLHxb…ErD4t3 → MPC sig → Sepolia 0xe49a119a…c511cb, signer 0x2368C2F3…c5Af2f (derived sealedswarm-agent-4 = 0x2368C2F3…c5Af2f), status 0x1 |
+| ✅ | Round · auction #29 | quill "opened pool" was signed by the NEAR MPC through its vault | NEAR 5WiArtGcRD…7vUpo8 → MPC sig → Sepolia 0xb3a06096…888f82, signer 0x28650C80…e7a89d (derived sealedswarm-agent-3 = 0x28650C80…e7a89d), status 0x1 |
+| ✅ | Round · auction #29 | orion "joined pool" was signed by the NEAR MPC through its vault | NEAR 95Hej6frsu…sL22Jb → MPC sig → Sepolia 0x33d95b4b…ea003e, signer 0xA31b6E0e…253d8f (derived sealedswarm-agent-4 = 0xA31b6E0e…253d8f), status 0x1 |
+| ✅ | Round · auction #29 | vega "joined pool" was signed by the NEAR MPC through its vault | NEAR 8bxbostr6f…pQqdar → MPC sig → Sepolia 0x3f7bc5e2…db46a3, signer 0xa1a28D4f…5F29F0 (derived sealedswarm-agent-3 = 0xa1a28D4f…5F29F0), status 0x1 |
+| ✅ | Round · auction #29 | pool #1 submitted by quill was signed by the NEAR MPC through its vault | NEAR H4UQb7M6ii…hFVaF8 → MPC sig → Sepolia 0xa406ce78…aaf6b9, signer 0x28650C80…e7a89d (derived sealedswarm-agent-3 = 0x28650C80…e7a89d), status 0x1 |
+| ✅ | Round · auction #29 | hijack attempt refused by the vault on NEAR | use settle() to pay 0.5 wNEAR to attacker.testnet (settle → pay attacker.testnet) → NEAR 7FvuzFxKdL…ogumMt: Smart contract panicked: seller is not on the owner's allowlist |
+| ✅ | Round · auction #29 | winner paid the seller in wNEAR on NEAR, through its vault | quill 0.0072 + orion 0.008 + vega 0.0064 wNEAR = price 216 units → northwind.ssmarket-anderssonm.testnet (transfers logged by the token contract in 3 NEAR txs) |
+| ✅ | Round · auction #29 | NEAR Intents quote is for exactly the price paid | 1Click dry-run quote: 0.0216 wNEAR (= price 216 units) → 0.071699 USDC on base for Northwind GPU, ~14s, quoted 2026-11-12T16:29:44.165Z |
+| ✅ | Round · auction #28 | dashboard result = on-chain result | "16x RTX 6000 · 1 hour": winner pool #1 (quill + orion + vega) → 0x936b3965…3Ce98c, price 84 (dashboard 84), 6 sealed entries |
+| ✅ | Round · auction #28 | pool #1 members are the named agents | quill + orion + vega = 0x28650C80…e7a89d, 0xA31b6E0e…253d8f, 0xa1a28D4f…5F29F0 |
+| ✅ | Round · auction #28 | every bid stays sealed: only the winner and the price are public | 8/8 bids: not publicly decryptable, decryptable only by their own bidder (Zama ACL 0xf0Ffdc93…0A433D), pool total sealed; winner + price public: true |
+| ✅ | Round · auction #28 | atlas "bid" was signed by the NEAR MPC through its vault | NEAR 436djGQfAy…E793hy → MPC sig → Sepolia 0xc153e790…745cfc, signer 0x059DeDeA…72b55B (derived sealedswarm-agent-1 = 0x059DeDeA…72b55B), status 0x1 |
+| ✅ | Round · auction #28 | nova "bid" was signed by the NEAR MPC through its vault | NEAR HXuj2r25wQ…ta9uPQ → MPC sig → Sepolia 0x3ccd324f…c8aef8, signer 0x9125D656…9Cb8E2 (derived sealedswarm-agent-2 = 0x9125D656…9Cb8E2), status 0x1 |
+| ✅ | Round · auction #28 | lyra "bid" was signed by the NEAR MPC through its vault | NEAR C1CT98zWzH…wupAnu → MPC sig → Sepolia 0xefcd24f6…047cb6, signer 0x2ee59E09…baCFE1 (derived sealedswarm-agent-1 = 0x2ee59E09…baCFE1), status 0x1 |
+| ✅ | Round · auction #28 | kai "bid" was signed by the NEAR MPC through its vault | NEAR F7H1MwHH1D…BvjAA3 → MPC sig → Sepolia 0x2223926f…f05248, signer 0x8042d3ba…0a576D (derived sealedswarm-agent-2 = 0x8042d3ba…0a576D), status 0x1 |
+| ✅ | Round · auction #28 | juno "bid" was signed by the NEAR MPC through its vault | NEAR BXqTeE6wCk…aKCnip → MPC sig → Sepolia 0xf01be801…ce795a, signer 0x2368C2F3…c5Af2f (derived sealedswarm-agent-4 = 0x2368C2F3…c5Af2f), status 0x1 |
+| ✅ | Round · auction #28 | quill "opened pool" was signed by the NEAR MPC through its vault | NEAR Bt8rBZbdNT…4Xay81 → MPC sig → Sepolia 0x3d6b4413…d03c42, signer 0x28650C80…e7a89d (derived sealedswarm-agent-3 = 0x28650C80…e7a89d), status 0x1 |
+| ✅ | Round · auction #28 | orion "joined pool" was signed by the NEAR MPC through its vault | NEAR JBhoSkoB6U…7qkQfx → MPC sig → Sepolia 0xcec12778…57605b, signer 0xA31b6E0e…253d8f (derived sealedswarm-agent-4 = 0xA31b6E0e…253d8f), status 0x1 |
+| ✅ | Round · auction #28 | vega "joined pool" was signed by the NEAR MPC through its vault | NEAR Cy5Jpkp5ow…YxDKPb → MPC sig → Sepolia 0x56fbe975…951c88, signer 0xa1a28D4f…5F29F0 (derived sealedswarm-agent-3 = 0xa1a28D4f…5F29F0), status 0x1 |
+| ✅ | Round · auction #28 | pool #1 submitted by quill was signed by the NEAR MPC through its vault | NEAR 7UpWKp2d3y…6kzgc9 → MPC sig → Sepolia 0x17c1b877…184648, signer 0x28650C80…e7a89d (derived sealedswarm-agent-3 = 0x28650C80…e7a89d), status 0x1 |
+| ✅ | Round · auction #28 | hijack attempt refused by the vault on NEAR | call close() to end the auction early (signed tx to 0x4994b953…e878cc, value 0, fee cap 3.7e-8 gwei) → NEAR 8oR46zsG6w…iptaxe: Smart contract panicked: only placeBid, joinPool and submitPool are allowed |
+| ✅ | Round · auction #28 | winner paid the seller in wNEAR on NEAR, through its vault | quill 0.0028 + orion 0.0031 + vega 0.0025 wNEAR = price 84 units → baobab.ssmarket-anderssonm.testnet (transfers logged by the token contract in 3 NEAR txs) |
+| ✅ | Round · auction #28 | NEAR Intents quote is for exactly the price paid | 1Click dry-run quote: 0.0084 wNEAR (= price 84 units) → 0.000013537286257867 ETH on base for Baobab Compute, ~14s, quoted 2026-11-12T13:29:42.811Z |
 | ✅ | Round · auction #27 | dashboard result = on-chain result | "8x H200 · 1 hour": winner pool #1 (atlas + quill + orion + vega) → 0x93562beC…d01D38, price 295 (dashboard 295), 5 sealed entries |
 | ✅ | Round · auction #27 | pool #1 members are the named agents | atlas + quill + orion + vega = 0x059DeDeA…72b55B, 0x28650C80…e7a89d, 0xA31b6E0e…253d8f, 0xa1a28D4f…5F29F0 |
 | ✅ | Round · auction #27 | every bid stays sealed: only the winner and the price are public | 8/8 bids: not publicly decryptable, decryptable only by their own bidder (Zama ACL 0xf0Ffdc93…0A433D), pool total sealed; winner + price public: true |
