@@ -77,7 +77,7 @@ function agentCard(a) {
 }
 function roundHtml(r, i) {
   const pays = (r.payments || []).length ? `<div class="pay">Paid on NEAR through the vaults: ${r.payments.map((p) => `<b>${who(p.agent)}</b> ${p.wnear} wNEAR ${p.ok ? '<span class="ok">✔</span>' : '<span class="err">✗ ' + esc(p.error) + "</span>"} ${near(p.near)}`).join(" · ")} → <code>${esc(r.payments[0].seller)}</code></div>` : "";
-  const chainName = { base: "Base", arb: "Arbitrum", eth: "Ethereum", bsc: "BNB Chain", sol: "Solana", near: "NEAR" };
+  const chainName = { base: "Base", arb: "Arbitrum", op: "Optimism", eth: "Ethereum", bsc: "BNB Chain", sol: "Solana", near: "NEAR" };
   const iq = r.intents;
   const intents = iq ? `<div class="txs">On mainnet, NEAR Intents would deliver this ${esc(iq.amountInFormatted)} wNEAR to ${esc(r.seller?.name)} as <b>${esc(iq.amountOutFormatted)} ${esc(iq.symbol)} on ${esc(chainName[iq.chain] || iq.chain)}</b> in about ${esc(iq.timeEstimate)} s (real 1Click quote, dry run: no funds moved; recipient <code>${esc(iq.recipient.slice(0, 10))}…</code>, the seller's address derived from its NEAR account).</div>` : "";
   const ai = r.ai ? `<div class="txs">Agents reasoned with <b>${esc(r.ai.model)}</b> in a TEE on NEAR AI Cloud: ${r.ai.verified}/${r.ai.decisions} decisions carry a TEE signature checked against the attestation (<a href="${esc(r.ai.proofs)}" target="_blank" rel="noopener">proofs</a>).</div>` : "";

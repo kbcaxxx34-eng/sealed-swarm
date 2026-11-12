@@ -72,7 +72,7 @@ const SWARMS = [
 const SELLERS = [
   { slug: "northwind", name: "Northwind GPU", payout: { symbol: "USDC", chain: "base" } },
   { slug: "ember", name: "Ember Compute", payout: { symbol: "USDC", chain: "arb" } },
-  { slug: "tessera", name: "Tessera Cloud", payout: { symbol: "USDC", chain: "eth" } },
+  { slug: "tessera", name: "Tessera Cloud", payout: { symbol: "USDC", chain: "op" } }, // not Ethereum: its bridge minimum (~0.09 NEAR) is above a round's price
   { slug: "kestrel", name: "Kestrel Labs", payout: { symbol: "USDT", chain: "bsc" } },
   { slug: "baobab", name: "Baobab Compute", payout: { symbol: "ETH", chain: "base" } },
 ];
