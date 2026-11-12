@@ -237,14 +237,17 @@ async function nearAiDecide(a, lot, history, budget, attestations) {
   const past = history.length ? `Recent clearing prices for this lot: ${history.join(", ")} units.` : "No price history for this lot yet.";
   const user = `Lot: "${lot.item}". Public reserve: ${lot.reserve} units. Market estimate: ${lot.estimate} units. ${past} ` +
     `Your budget: ${budget} units. What is this lot truly worth to you?`;
-  const body = JSON.stringify({ model: NEARAI_MODEL, temperature: 0.6, max_tokens: 400, messages: [{ role: "system", content: sys }, { role: "user", content: user }] });
+  const body = JSON.stringify({ model: NEARAI_MODEL, temperature: 0.6, max_tokens: 3000, messages: [{ role: "system", content: sys }, { role: "user", content: user }] });
   const res = await fetch(`${NEARAI}/chat/completions`, { method: "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${NEARAI_KEY}`, "x-no-aliasing": "true" }, body });
   if (!res.ok) throw new Error(`chat HTTP ${res.status}: ${(await res.text()).slice(0, 200)}`);
   const response = await res.text();
   const out = JSON.parse(response);
-  const text = out?.choices?.[0]?.message?.content || "";
-  const m = text.replace(/<think>[\s\S]*?<\/think>/g, "").match(/\{[\s\S]*\}/);
-  if (!m) throw new Error("no JSON in the model's answer");
+  const msg = out?.choices?.[0]?.message || {};
+  // Qwen3 is a reasoning model: the answer follows its thinking, which may come inline (<think>…</think>)
+  // or in a separate field. Take the last {...} that carries a valuation.
+  const text = [msg.content, msg.reasoning_content, msg.reasoning].filter((x) => typeof x === "string").join("\n").replace(/<think>[\s\S]*?<\/think>/g, "");
+  const m = [...text.matchAll(/\{[^{}]*"valuation"[^{}]*\}/g)].pop();
+  if (!m) throw new Error(`no JSON in the model's answer (finish_reason=${out?.choices?.[0]?.finish_reason}, fields=${Object.keys(msg).join(",")}): ${JSON.stringify(text.slice(-300))}`);
   const j = JSON.parse(m[0]);
   const v = Math.round(Number(j.valuation));
   if (!Number.isFinite(v) || v < 1) throw new Error("invalid valuation");
