@@ -39,7 +39,7 @@ function test(name, fn) { fn(); passed++; console.log("  ✔ " + name); }
 
 console.log("SwarmVault (wasm, mocked NEAR host)");
 
-test("configure creates one funded sub-account per agent with a key that can only call request_sign", () => {
+test("configure creates one funded sub-account per agent with a key that can only call request_sign and settle", () => {
   const { vm, r } = setup();
   assert.equal(r.promises.length, 3);
   r.promises.forEach((p, i) => {
@@ -49,7 +49,7 @@ test("configure creates one funded sub-account per agent with a key that can onl
     assert.equal(p.actions[1].amount, QUARTER_NEAR);
     const k = p.actions[2];
     assert.equal(k.receiver, VAULT);
-    assert.equal(k.methods, "request_sign");
+    assert.equal(k.methods, "request_sign,settle");
     assert.equal(k.allowance, 0n); // unlimited allowance; the 0.25 NEAR balance is the cap
     assert.equal(k.publicKey[0], 0); // ed25519
     assert.deepEqual([...k.publicKey.slice(1)], [...AGENTS[i].publicKey]);
@@ -211,6 +211,28 @@ test("settlement: a failed transfer restores the budget and allows a retry; the 
   vm.call("settle", { input: settleArgs(4n, 400_000n, "gpu-seller.near"), predecessor: acct(0) }); // retry works
   assert.equal(vm.call("on_settled", { input: cb, predecessor: VAULT, results: [1] }).ret, "true");
   assert.equal(vm.call("get_budget", { input: new Uint8Array([0]) }).ret, "600000");
+});
+
+test("settlement on testnet: with the token as both accounts the vault pays with NEP-141 ft_transfer (wrap.testnet)", () => {
+  const { vm } = setup();
+  vm.call("set_settlement", { input: settlementArgs("wrap.testnet", "wrap.testnet") });
+  vm.call("allow_seller", { input: new TextEncoder().encode("gpus.seller.testnet") });
+  vm.call("set_budget", { input: budgetArgs(1, 5_000_000_000_000_000_000_000n) }); // nova: 0.005 wNEAR
+  vm.call("request_sign", { input: tx({ auctionId: 9n }), predecessor: acct(1) }); // nova entered auction 9
+  const r = vm.call("settle", { input: settleArgs(9n, 2_090_000_000_000_000_000_000n, "gpus.seller.testnet"), predecessor: acct(1) });
+  const [transfer, then] = r.promises;
+  assert.equal(transfer.account, "wrap.testnet");
+  assert.equal(transfer.method, "ft_transfer");
+  assert.equal(transfer.amount, 1n); // 1 yoctoNEAR, required by NEP-141
+  const args = JSON.parse(transfer.args);
+  assert.deepEqual(Object.keys(args), ["receiver_id", "amount", "memo"]);
+  assert.equal(args.receiver_id, "gpus.seller.testnet");
+  assert.equal(args.amount, "2090000000000000000000");
+  assert.ok(args.memo.includes("0x" + "0".repeat(63) + "9") && args.memo.includes("agent 2"));
+  assert.equal(then.method, "on_settled");
+  assert.equal(vm.call("get_budget", { input: new Uint8Array([1]) }).ret, "2910000000000000000000");
+  expectPanic(() => vm.call("settle", { input: settleArgs(9n, 1n, "gpus.seller.testnet"), predecessor: acct(1) }), "already paid");
+  expectPanic(() => vm.call("settle", { input: settleArgs(9n, 1n, "gpus.seller.testnet"), predecessor: acct(0) }), "did not enter");
 });
 
 test("owner can point the vault at the mainnet MPC signer", () => {

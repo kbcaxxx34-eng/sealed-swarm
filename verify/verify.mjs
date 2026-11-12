@@ -12,18 +12,24 @@
 //  7. for every bid/pool action in the live market, the NEAR vault transaction carried the exact
 //     unsigned Ethereum transaction, the NEAR MPC returned its signature, and that signature IS
 //     the Sepolia transaction (same hash), sent from the agent's MPC-derived address
-//  8. every hijack attempt was refused by the vault on NEAR with the policy reason
+//  8. every hijack attempt (six kinds, one per round) was refused by the vault on NEAR with the policy reason
 //  9. each dashboard round (winner, price, bid count, pool members) matches the chain
+// 10. (v2) the winner — or each pool member, for its share — paid the seller in wNEAR on NEAR through
+//     its vault's settle, and the payments add up to the clearing price
+// 11. (v2) each agent decision made by a TEE model on NEAR AI Cloud carries the TEE's signature over the
+//     exact request and response, from a signer bound to a TDX quote with the bot's fresh nonce
 import fs from "node:fs";
 import crypto from "node:crypto";
-import { keccak256, parseTransaction, serializeTransaction, recoverTransactionAddress, getAddress, encodeAbiParameters, decodeFunctionResult, encodeFunctionData } from "viem";
+import { keccak256, parseTransaction, serializeTransaction, recoverTransactionAddress, recoverMessageAddress, getAddress, encodeAbiParameters, decodeFunctionResult, encodeFunctionData } from "viem";
+import { checkDecisionProof } from "./teeproof.mjs";
 import { contracts } from "chainsig.js";
 
 const here = (p) => new URL(p, import.meta.url);
 const arg = (k, d) => { const i = process.argv.indexOf(`--${k}`); return i > 0 ? process.argv[i + 1] : (process.env[k.toUpperCase().replace(/-/g, "_")] ?? d); };
 
 const AUCTION = "0x4994b9537D50756c5858399bDd460Ba70BE878cc";
-const VAULTS = ["vault.ssmarket-anderssonm.testnet", "ssvault-anderssonm.testnet"];
+const V1_VAULTS = ["vault.ssmarket-anderssonm.testnet", "ssvault-anderssonm.testnet"]; // + v2 vaults listed by the market
+const UNIT = 100000000000000000000n; // 1 auction unit = 0.0001 wNEAR
 const MPC = "v1.signer-prod.testnet";
 const PATH_PREFIX = "sealedswarm-agent-";
 const MARKET_URL = arg("market-url", "https://sealedbid.lercomigo.space/swarm/market/market.json");
@@ -148,36 +154,61 @@ async function proveSignedAction(section, label, nearHash, sender, ethHash, vaul
 }
 
 // ---------- checks ----------
+const sha = (buf) => base58(crypto.createHash("sha256").update(buf).digest());
+const WASM = {
+  [sha(fs.readFileSync(here("../near-vault/build/swarm_vault.wasm")))]: { v: 2, file: "near-vault/build/swarm_vault.wasm", methods: ["request_sign", "settle"] },
+  [sha(fs.readFileSync(here("../near-vault/build/swarm_vault_v1.wasm")))]: { v: 1, file: "near-vault/build/swarm_vault_v1.wasm (v1, commit 645f32f)", methods: ["request_sign"] },
+};
+const vaultOf = (agentAccount) => agentAccount.split(".").slice(1).join(".");
+const configs = {};
+async function vaultConfig(vault) { return (configs[vault] ??= await view(vault, "get_config")); }
+async function indexIn(account) { const c = await vaultConfig(vaultOf(account)); const i = c.agent_accounts.indexOf(account); if (i < 0) throw new Error(`${account} is not an agent of ${vaultOf(account)}`); return i + 1; }
+async function addressOf(account) { return agentAddress(vaultOf(account), await indexIn(account)); }
+
+async function checkVault(vault) {
+  let version = null;
+  await guard("NEAR vault", `${vault}: deployed code = repo wasm`, async () => {
+    const acc = await near("query", { request_type: "view_account", finality: "final", account_id: vault });
+    const w = WASM[acc.code_hash];
+    version = w;
+    record("NEAR vault", `${vault}: deployed code = repo wasm`, !!w, `code_hash ${acc.code_hash}${w ? ` = sha256(${w.file})` : " matches no wasm in this repo"}`);
+  });
+  await guard("NEAR vault", `${vault}: holds zero access keys`, async () => {
+    const keys = await near("query", { request_type: "view_access_key_list", finality: "final", account_id: vault });
+    record("NEAR vault", `${vault}: holds zero access keys`, keys.keys.length === 0, `${keys.keys.length} keys — no one can redeploy, upgrade or drain it`);
+  });
+  await guard("NEAR vault", `${vault}: policy targets the auction and the NEAR MPC`, async () => {
+    const c = await vaultConfig(vault);
+    const ok = c.configured && c.auction.toLowerCase() === AUCTION.toLowerCase() && c.mpc === MPC && c.path_prefix === PATH_PREFIX && c.paused === false;
+    const settle = c.intents ? `, settles in ${c.settlement_token}${c.intents === c.settlement_token ? " (NEP-141 ft_transfer)" : " via " + c.intents}` : "";
+    record("NEAR vault", `${vault}: policy targets the auction and the NEAR MPC`, ok, `owner ${c.owner}, auction ${c.auction}, mpc ${c.mpc}, ${c.agents} agents, max gas ${parseInt(c.max_gas_hex, 16)}, max fee ${parseInt(c.max_fee_per_gas_hex, 16) / 1e9} gwei${settle}`);
+  });
+  const allowed = version?.methods ?? ["request_sign"];
+  for (const agent of configs[vault]?.agent_accounts ?? []) {
+    await guard("NEAR vault", `${agent}: keys can only call ${allowed.join(" / ")} on the vault`, async () => {
+      const keys = await near("query", { request_type: "view_access_key_list", finality: "final", account_id: agent });
+      const ok = keys.keys.length > 0 && keys.keys.every((k) => { const fc = k.access_key.permission?.FunctionCall; return fc && fc.receiver_id === vault && JSON.stringify([...fc.method_names].sort()) === JSON.stringify([...allowed].sort()); });
+      record("NEAR vault", `${agent}: keys can only call ${allowed.join(" / ")} on the vault`, ok, `${keys.keys.length} key(s), ${keys.keys.map((k) => JSON.stringify(k.access_key.permission)).join("; ").slice(0, 180)}`);
+    });
+  }
+}
+
 async function main() {
   console.log(`SealedSwarm verifier — NEAR ${NEAR_RPCS[0]} · Sepolia ${ETH_RPCS[0]}\n`);
-  const wasm = fs.readFileSync(here("../near-vault/build/swarm_vault.wasm"));
-  const wasmHash = base58(crypto.createHash("sha256").update(wasm).digest());
+
+  // market data first: it lists the vaults currently trading
+  let market, source;
+  try {
+    const r = await fetch(MARKET_URL, { cache: "no-store" });
+    market = await r.json(); source = MARKET_URL;
+    fs.writeFileSync(here("./market.snapshot.json"), JSON.stringify(market, null, 1));
+  } catch (e) {
+    market = JSON.parse(fs.readFileSync(here("./market.snapshot.json"), "utf8")); source = "verify/market.snapshot.json (live dashboard unreachable: " + String(e.message).slice(0, 80) + ")";
+  }
+  const vaults = [...new Set([...V1_VAULTS, ...(market.vaults || []), market.vault].filter(Boolean))];
 
   // 1–4: NEAR vaults
-  const configs = {};
-  for (const vault of VAULTS) {
-    await guard("NEAR vault", `${vault}: deployed code = repo wasm`, async () => {
-      const acc = await near("query", { request_type: "view_account", finality: "final", account_id: vault });
-      record("NEAR vault", `${vault}: deployed code = repo wasm`, acc.code_hash === wasmHash, `code_hash ${acc.code_hash}, sha256(near-vault/build/swarm_vault.wasm) ${wasmHash}`);
-    });
-    await guard("NEAR vault", `${vault}: holds zero access keys`, async () => {
-      const keys = await near("query", { request_type: "view_access_key_list", finality: "final", account_id: vault });
-      record("NEAR vault", `${vault}: holds zero access keys`, keys.keys.length === 0, `${keys.keys.length} keys — no one can redeploy, upgrade or drain it`);
-    });
-    await guard("NEAR vault", `${vault}: policy targets the auction and the NEAR MPC`, async () => {
-      const c = await view(vault, "get_config");
-      configs[vault] = c;
-      const ok = c.configured && c.auction.toLowerCase() === AUCTION.toLowerCase() && c.mpc === MPC && c.path_prefix === PATH_PREFIX && c.paused === false;
-      record("NEAR vault", `${vault}: policy targets the auction and the NEAR MPC`, ok, `auction ${c.auction}, mpc ${c.mpc}, ${c.agents} agents, max gas ${parseInt(c.max_gas_hex, 16)}, max fee ${parseInt(c.max_fee_per_gas_hex, 16) / 1e9} gwei`);
-    });
-    for (const agent of configs[vault]?.agent_accounts ?? []) {
-      await guard("NEAR vault", `${agent}: keys can only call request_sign on the vault`, async () => {
-        const keys = await near("query", { request_type: "view_access_key_list", finality: "final", account_id: agent });
-        const ok = keys.keys.length > 0 && keys.keys.every((k) => { const fc = k.access_key.permission?.FunctionCall; return fc && fc.receiver_id === vault && fc.method_names.length === 1 && fc.method_names[0] === "request_sign"; });
-        record("NEAR vault", `${agent}: keys can only call request_sign on the vault`, ok, `${keys.keys.length} key(s), ${keys.keys.map((k) => JSON.stringify(k.access_key.permission)).join("; ").slice(0, 160)}`);
-      });
-    }
-  }
+  for (const vault of vaults) await checkVault(vault);
 
   // 5: Sepolia bytecode
   await guard("Sepolia auction", "deployed bytecode = contract compiled from this repo", async () => {
@@ -210,21 +241,12 @@ async function main() {
     record("Sepolia auction", "every revealed winner entered the auction", bad.length === 0, `${count} auctions, ${revealed} revealed (${noSale} below reserve, no sale), every winner was a bidder or a submitted pool and paid ≥ reserve${bad.length ? "; bad: " + bad.join(",") : ""}`);
   });
 
-  // 7–9: the live market
-  let market, source;
-  try {
-    const r = await fetch(MARKET_URL, { cache: "no-store" });
-    market = await r.json(); source = MARKET_URL;
-    fs.writeFileSync(here("./market.snapshot.json"), JSON.stringify(market, null, 1));
-  } catch (e) {
-    market = JSON.parse(fs.readFileSync(here("./market.snapshot.json"), "utf8")); source = "verify/market.snapshot.json (live dashboard unreachable: " + String(e.message).slice(0, 80) + ")";
-  }
+  // 7–11: the live market
   console.log(`\nmarket data: ${source}, ${market.rounds.length} rounds, updated ${market.updated}\n`);
-  const vault = market.vault;
-  const agentsList = configs[vault]?.agent_accounts ?? [];
-  const indexOf = (account) => agentsList.indexOf(account) + 1;
-  const nameToAccount = (n) => (n.includes(".") ? n : agentsList.find((a) => a.startsWith(n + ".")));
-  let signed = 0, refusals = 0;
+  const base = MARKET_URL.replace(/[^/]*$/, "");
+  let signed = 0, refusals = 0, payments = 0, aiChecked = 0;
+  const v1Vault = market.vault && !market.vaults ? market.vault : "vault.ssmarket-anderssonm.testnet";
+  const acctOf = (round, name) => (name.includes(".") ? name : round.agents.find((x) => x.name === name)?.account ?? `${name}.${v1Vault}`);
 
   for (const round of market.rounds) {
     const sec = `Round · auction #${round.auction}`;
@@ -232,53 +254,90 @@ async function main() {
       const a = auctions[round.auction] ?? (await ethCall("getAuction", [BigInt(round.auction)]));
       let expectedWinner;
       if (round.pool && /^pool/.test(round.winner || "")) expectedWinner = poolAddress(round.auction, round.pool.id);
-      else if (round.winner && !/no sale/i.test(round.winner)) expectedWinner = await agentAddress(vault, indexOf(nameToAccount(round.winner.split(" ")[0])));
+      else if (round.winner && !/no sale/i.test(round.winner)) expectedWinner = await addressOf(acctOf(round, round.winner.split(" ")[0]));
       else expectedWinner = "0x0000000000000000000000000000000000000000";
       const ok = a.revealed && Number(a.price) === Number(round.price ?? 0) && a.bidCount === round.bidCount && getAddress(a.winner) === getAddress(expectedWinner);
-      record(sec, "dashboard result = on-chain result", ok, `"${round.lot}": winner ${round.winner} → ${short(a.winner)}, price ${a.price} (dashboard ${round.price}), ${a.bidCount} sealed bids`);
+      record(sec, "dashboard result = on-chain result", ok, `"${round.lot}": winner ${round.winner} → ${short(a.winner)}, price ${a.price} (dashboard ${round.price}), ${a.bidCount} sealed entries`);
     });
     if (round.pool) {
       await guard(sec, `pool #${round.pool.id} members are the named agents`, async () => {
         const members = (await ethCall("getPoolMembers", [BigInt(round.auction), BigInt(round.pool.id)])).map((x) => getAddress(x));
-        const expected = await Promise.all(round.pool.members.map((n) => agentAddress(vault, indexOf(nameToAccount(n)))));
+        const accounts = round.pool.accounts ?? round.pool.members.map((n) => acctOf(round, n));
+        const expected = await Promise.all(accounts.map(addressOf));
         record(sec, `pool #${round.pool.id} members are the named agents`, JSON.stringify(members) === JSON.stringify(expected), `${round.pool.members.join(" + ")} = ${members.map(short).join(", ")}`);
       });
     }
     for (const ag of round.agents) {
       if (!ag.ok || !ag.near || !ag.eth) continue;
       signed++;
-      await proveSignedAction(sec, `${ag.name} "${ag.action}" was signed by the NEAR MPC through the vault`, ag.near, ag.account, ag.eth, vault, indexOf(ag.account));
+      await proveSignedAction(sec, `${ag.name} "${ag.action}" was signed by the NEAR MPC through its vault`, ag.near, ag.account, ag.eth, vaultOf(ag.account), await indexIn(ag.account));
     }
     for (const t of round.txs) {
       if (!t.near || !t.eth) continue;
-      const who = t.what.split(" by ")[1];
-      const acct = nameToAccount(who);
+      const acct = t.account ?? acctOf(round, t.what.split(" by ")[1]);
       signed++;
-      await proveSignedAction(sec, `${t.what} was signed by the NEAR MPC through the vault`, t.near, acct, t.eth, vault, indexOf(acct));
+      await proveSignedAction(sec, `${t.what} was signed by the NEAR MPC through its vault`, t.near, acct, t.eth, vaultOf(acct), await indexIn(acct));
     }
     if (round.blocked?.near) {
       refusals++;
-      await guard(sec, "hijack attempt was refused by the vault on NEAR", async () => {
-        const tx = await nearTx(round.blocked.near, round.blocked.agent);
-        const { unsigned } = requestSignArgs(tx);
-        const target = parseTransaction(unsigned).to;
+      await guard(sec, `hijack attempt refused by the vault on NEAR`, async () => {
+        const b = round.blocked;
+        const tx = await nearTx(b.near, b.agent);
+        const fc = tx.transaction.actions.find((x) => x.FunctionCall)?.FunctionCall;
+        let what = fc?.method_name;
+        if (fc?.method_name === "request_sign") { const t = parseTransaction("0x" + Buffer.from(fc.args, "base64").toString("hex")); what = `signed tx to ${short(t.to)}, value ${t.value ?? 0n}, fee cap ${Number(t.maxFeePerGas ?? 0n) / 1e9} gwei`; }
+        if (fc?.method_name === "settle") { const a = Buffer.from(fc.args, "base64"); what = `settle → pay ${a.subarray(49).toString()}`; }
         const failure = JSON.stringify(tx.status);
-        const ok = !tx.status.SuccessValue && failure.includes("target is not the approved auction contract") && getAddress(target) !== getAddress(AUCTION);
-        record(sec, "hijack attempt was refused by the vault on NEAR", ok, `${round.blocked.attempt} (to ${short(target)}) → NEAR ${short(round.blocked.near)}: ${failure.match(/Smart contract panicked: [^"\\]*/)?.[0] ?? failure.slice(0, 120)}`);
+        const reason = b.reason || "target is not the approved auction contract";
+        const ok = !tx.status.SuccessValue && failure.includes(reason) && tx.transaction.receiver_id === vaultOf(b.agent);
+        record(sec, `hijack attempt refused by the vault on NEAR`, ok, `${b.attempt} (${what}) → NEAR ${short(b.near)}: ${failure.match(/Smart contract panicked: [^"\\]*/)?.[0] ?? failure.slice(0, 120)}`);
+      });
+    }
+    // 10: payment on NEAR
+    if (round.payments?.length) {
+      await guard(sec, "winner paid the seller in wNEAR on NEAR, through its vault", async () => {
+        let sum = 0n; const parts = [];
+        const winners = round.pool && /^pool/.test(round.winner) ? (round.pool.accounts ?? []) : [round.winner];
+        for (const p of round.payments) {
+          const tx = await nearTx(p.near, p.agent);
+          const logs = logsOf(tx);
+          const ev = logs.filter((l) => l.startsWith("EVENT_JSON:")).map((l) => JSON.parse(l.slice(11))).find((e) => e.standard === "nep141" && e.event === "ft_transfer");
+          const d = ev?.data?.[0];
+          const ok = d && d.old_owner_id === vaultOf(p.agent) && d.new_owner_id === p.seller && BigInt(d.amount) === BigInt(p.units) * UNIT && logs.includes("settlement confirmed") && winners.includes(p.agent);
+          if (!ok) throw new Error(`payment ${p.near} by ${p.agent} does not check out: ${JSON.stringify(d ?? logs).slice(0, 200)}`);
+          sum += BigInt(p.units); parts.push(`${p.agent.split(".")[0]} ${Number(p.units) / 10000}`);
+          payments++;
+        }
+        record(sec, "winner paid the seller in wNEAR on NEAR, through its vault", sum === BigInt(round.price), `${parts.join(" + ")} wNEAR = price ${round.price} units → ${round.payments[0].seller} (ft_transfer events on ${round.payments.length} NEAR txs)`);
+      });
+    }
+    // 11: TEE proofs of the agents' decisions
+    if (round.ai?.proofs) {
+      await guard(sec, "agent decisions were made in an attested TEE (NEAR AI Cloud)", async () => {
+        let bundle;
+        const local = here(`./${round.ai.proofs}`);
+        try { bundle = await (await fetch(base + round.ai.proofs, { cache: "no-store" })).json(); fs.mkdirSync(here("./proofs"), { recursive: true }); fs.writeFileSync(local, JSON.stringify(bundle)); }
+        catch { bundle = JSON.parse(fs.readFileSync(local, "utf8")); }
+        const results = await Promise.all(Object.entries(bundle.decisions).map(async ([acct, proof]) => [acct, await checkDecisionProof(proof, bundle.attestations, recoverMessageAddress)]));
+        const good = results.filter(([, r]) => r.ok).length;
+        aiChecked += good;
+        const bad = results.filter(([, r]) => !r.ok).map(([a, r]) => `${a.split(".")[0]}: ${r.checks.filter((c) => !c.ok).map((c) => c.text).join("; ")}`);
+        record(sec, "agent decisions were made in an attested TEE (NEAR AI Cloud)", good === results.length && good > 0, `${good}/${results.length} decisions by ${bundle.model}: TEE signature over the exact request+response, signer bound to a TDX quote with a fresh nonce${bad.length ? " · " + bad.join(" | ") : ""}`);
       });
     }
   }
 
   // ---------- write report ----------
   const passed = rows.filter((r) => r.ok).length;
-  const report = { generated: new Date().toISOString(), auction: AUCTION, vaults: VAULTS, market: { source, updated: market.updated, rounds: market.rounds.length, signedActions: signed, hijacksRefused: refusals }, passed, failed: failures, rows };
+  const report = { generated: new Date().toISOString(), auction: AUCTION, vaults, market: { source, updated: market.updated, rounds: market.rounds.length, signedActions: signed, hijacksRefused: refusals, paymentsOnNear: payments, teeDecisions: aiChecked }, passed, failed: failures, rows };
   fs.writeFileSync(`${OUT_DIR}/report.json`, JSON.stringify(report, null, 2));
+  const extra = [payments ? `${payments} wNEAR payments confirmed on NEAR` : "", aiChecked ? `${aiChecked} agent decisions proven to come from an attested TEE` : ""].filter(Boolean).join("; ");
   const md = [
     `# SealedSwarm verification report`,
     ``,
     `Generated ${report.generated} by \`verify/verify.mjs\` from public RPC only (no keys).`,
     ``,
-    `**${passed} passed, ${failures} failed.** ${signed} agent actions traced from NEAR vault → NEAR MPC signature → Sepolia transaction; ${refusals} hijack attempts confirmed refused on NEAR.`,
+    `**${passed} passed, ${failures} failed.** ${signed} agent actions traced from NEAR vault → NEAR MPC signature → Sepolia transaction; ${refusals} hijack attempts confirmed refused on NEAR${extra ? "; " + extra : ""}.`,
     ``,
     `Market data: ${source} (updated ${market.updated}).`,
     ``,

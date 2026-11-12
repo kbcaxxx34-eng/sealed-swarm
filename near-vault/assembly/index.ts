@@ -17,9 +17,10 @@
 //   - each agent enters each auction at most once (one bid, or one pool contribution);
 //     submitPool is allowed only for an agent that already joined a pool in that auction
 //
-// Settlement through NEAR Intents (optional, mainnet: intents.near has no testnet):
+// Settlement (optional): through NEAR Intents on mainnet, or directly with NEP-141 ft_transfer on a
+// token such as wrap.testnet (set_settlement with the token as both accounts) on testnet:
 //   an agent that won (alone or in a pool) asks the vault to pay the seller its share. The vault
-//   moves its own balance inside the NEAR Intents verifier with mt_transfer, only if the seller is
+//   pays from its own balance (mt_transfer inside the Intents verifier, or ft_transfer), only if the seller is
 //   on the owner's allowlist, the agent entered that auction, has not paid it yet, and the amount
 //   fits the agent's remaining budget (a spending limit set by the owner). A failed transfer
 //   restores the budget in a callback.
@@ -208,7 +209,8 @@ function selfId(): Uint8Array { current_account_id(REG); return readRegister(); 
 /// Binary args: [20 auction][1 n_fee][fee BE][1 n_gas][gas BE][1 n_agents]
 ///              then per agent: [1 name_len][name][32 ed25519 public key]
 /// Creates <name>.<vault> for each agent, funds it with 0.25 NEAR and adds the agent's key as a
-/// function-call key restricted to <vault>.request_sign (no allowance cap; the balance is the cap).
+/// function-call key restricted to <vault>.request_sign and <vault>.settle (no allowance cap; the
+/// balance is the cap).
 export function configure(): void {
   if (sget("owner") != null) { fail("already configured"); return; }
   // owner = the caller, unless the vault configures itself during setup (deployed with a temporary
@@ -229,7 +231,7 @@ export function configure(): void {
   const self = selfId();
   const selfStr = String.UTF8.decode(self.buffer);
   const fund = agentFund();
-  const methods = utf8("request_sign");
+  const methods = utf8("request_sign,settle"); // NEAR host format: comma-separated
   const noAllowance = new Uint8Array(16);
   for (let i = 0; i < n; i++) {
     if (p >= a.length) { fail("bad agent list"); return; }
@@ -250,7 +252,7 @@ export function configure(): void {
     promise_batch_action_transfer(pr, ptr(fund));
     // allowance 0 = unlimited: a NEAR allowance is consumed by *prepaid* gas and never refunded, so a
     // finite one would lock the agent out after a few 300 Tgas calls. The agent's balance (0.25 NEAR)
-    // is the real spending cap, and the key still can only call request_sign.
+    // is the real spending cap, and the key still can only call request_sign and settle.
     promise_batch_action_add_key_with_function_call(pr, 33, ptr(pk), 0, ptr(noAllowance),
       <u64>self.length, ptr(self), <u64>methods.length, ptr(methods));
   }
@@ -538,11 +540,17 @@ export function settle(): void {
 
   const dec = u128ToDec(amount);
   const memo = "SealedSwarm auction 0x" + toHex(auctionId) + " agent " + (agent + 1).toString();
-  const args = utf8('{"receiver_id":"' + seller + '","token_id":"nep141:' + String.UTF8.decode(token!.buffer) +
-    '","amount":"' + dec + '","memo":"' + memo + '"}');
-  const method = utf8("mt_transfer");
+  // intents == token: pay directly with NEP-141 ft_transfer on the token (testnet, e.g. wrap.testnet);
+  // otherwise move the vault's balance inside the NEAR Intents verifier with mt_transfer (mainnet).
+  const direct = eq(intents!, token!);
+  const args = direct
+    ? utf8('{"receiver_id":"' + seller + '","amount":"' + dec + '","memo":"' + memo + '"}')
+    : utf8('{"receiver_id":"' + seller + '","token_id":"nep141:' + String.UTF8.decode(token!.buffer) +
+      '","amount":"' + dec + '","memo":"' + memo + '"}');
+  const method = utf8(direct ? "ft_transfer" : "mt_transfer");
   const yocto = new Uint8Array(16); yocto[0] = 1;
-  log("agent " + (agent + 1).toString() + " pays " + dec + " to " + seller + " via NEAR Intents");
+  log("agent " + (agent + 1).toString() + " pays " + dec + " to " + seller + " for auction 0x" + toHex(auctionId) +
+    (direct ? " with ft_transfer on " + String.UTF8.decode(token!.buffer) : " via NEAR Intents"));
   const p = promise_create(<u64>intents!.length, ptr(intents!), <u64>method.length, ptr(method), <u64>args.length, ptr(args), ptr(yocto), SETTLE_GAS);
 
   const cbArgs = new Uint8Array(49); cbArgs[0] = <u8>agent; cbArgs.set(auctionId, 1); cbArgs.set(amount, 33);

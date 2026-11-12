@@ -18,6 +18,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          fetch-depth: 0
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
           node-version: 22.x
@@ -28,6 +30,8 @@ jobs:
         run: npm run test:all
       - name: Vault wasm build is reproducible (rebuilt wasm = committed wasm = deployed code)
         run: git diff --exit-code -- near-vault/build/swarm_vault.wasm app/src/swarm_vault.wasm
+      - name: The v1 vault wasm (still running on the v1 vaults) is the one built at commit 645f32f
+        run: git show 645f32f:near-vault/build/swarm_vault.wasm | cmp - near-vault/build/swarm_vault_v1.wasm
       - name: Market simulation (5 auctions, 20 agents, 5 vaults)
         run: npm run simulate | tee simulation-output.txt
       - uses: actions/upload-artifact@v4
