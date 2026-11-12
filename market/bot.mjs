@@ -66,6 +66,17 @@ const SWARMS = [
     { name: "juno", style: "truthful", range: [0.85, 1.1], why: "You bid exactly what the compute is worth to you." },
   ] },
 ];
+// GPU providers that sell lots, one per round in turn (fictional names). Each has a NEAR testnet
+// account that receives wNEAR, a Sepolia account that opens its auctions, and the asset it wants on
+// mainnet: a NEAR Intents 1Click dry-run quote shows how each payment would reach it there.
+const SELLERS = [
+  { slug: "northwind", name: "Northwind GPU", payout: { symbol: "USDC", chain: "base" } },
+  { slug: "ember", name: "Ember Compute", payout: { symbol: "USDC", chain: "arb" } },
+  { slug: "tessera", name: "Tessera Cloud", payout: { symbol: "USDC", chain: "eth" } },
+  { slug: "kestrel", name: "Kestrel Labs", payout: { symbol: "USDT", chain: "bsc" } },
+  { slug: "baobab", name: "Baobab Compute", payout: { symbol: "ETH", chain: "base" } },
+];
+const ONECLICK = "https://1click.chaindefuser.com/v0";
 const LOTS = [
   { item: "8x H100 · 1 hour", estimate: 220, reserve: 150 },
   { item: "4x A100 · 2 hours", estimate: 140, reserve: 90 },
@@ -128,7 +139,8 @@ function state() {
   return s;
 }
 const saveState = (s) => { saveJson(STATE_FILE, s); fs.chmodSync(STATE_FILE, 0o600); };
-const sellerNear = () => `gpus.${OWNER}`;
+const sellerNear = () => `gpus.${OWNER}`; // the first (single) seller, kept allowed in the v2 vaults
+const sellerAccount = (sl) => `${sl.slug}.${OWNER}`;
 
 // signs and sends a NEAR transaction with a local key
 async function nearSend(signerId, keyStr, receiverId, actions) {
@@ -246,6 +258,25 @@ async function nearAiDecide(a, lot, history, budget, attestations) {
   return { v: Math.min(v, lot.estimate * 3), reason: String(j.reason || "").slice(0, 140), brain: NEARAI_MODEL, proof, verified: check.ok };
 }
 
+// NEAR Intents 1Click: a real quote (dry run, no funds move) for paying `yocto` wNEAR to the seller
+// in the asset and on the chain it wants. The recipient is the seller's own address on that chain,
+// derived from its NEAR account by Chain Signatures (path "payout").
+let tokenList = null;
+async function intentsQuote(sl, yocto) {
+  tokenList ??= await (await fetch(`${ONECLICK}/tokens`)).json();
+  const t = tokenList.find((x) => x.symbol === sl.payout.symbol && x.blockchain === sl.payout.chain);
+  if (!t) throw new Error(`no ${sl.payout.symbol} on ${sl.payout.chain} in the 1Click token list`);
+  const recipient = (await evm.deriveAddressAndPublicKey(sellerAccount(sl), "payout")).address;
+  const body = { dry: true, swapType: "EXACT_INPUT", slippageTolerance: 100, originAsset: "nep141:wrap.near", depositType: "INTENTS", destinationAsset: t.assetId,
+    amount: yocto.toString(), refundTo: "anderssonm.near", refundType: "INTENTS", recipient, recipientType: "DESTINATION_CHAIN", deadline: new Date(Date.now() + 600_000).toISOString(), quoteWaitingTimeMs: 3000 };
+  const r = await fetch(`${ONECLICK}/quote`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+  const j = await r.json();
+  if (!r.ok || !j.quote) throw new Error(`1Click ${r.status}: ${JSON.stringify(j).slice(0, 200)}`);
+  const q = j.quote;
+  return { dry: true, quotedAt: j.timestamp ?? new Date().toISOString(), origin: "nep141:wrap.near", destination: t.assetId, symbol: sl.payout.symbol, chain: sl.payout.chain, recipient,
+    amountIn: q.amountIn, amountInFormatted: q.amountInFormatted, amountInUsd: q.amountInUsd, amountOut: q.amountOut, amountOutFormatted: q.amountOutFormatted, amountOutUsd: q.amountOutUsd, timeEstimate: q.timeEstimate, signature: j.signature ?? null };
+}
+
 function unit(seed) { return Number(BigInt(keccak256(stringToBytes(seed)).slice(0, 14))) / 2 ** 54; }
 function rulesDecide(a, lot, history, seed) {
   // rule-based fallback: style range around the estimate, nudged toward recent clearing prices
@@ -327,6 +358,15 @@ async function upgrade() {
   const registered = async (id) => !!(await nearView(WNEAR, "storage_balance_of", { account_id: id }));
   const storage = (id) => actionCreators.functionCall("storage_deposit", Buffer.from(JSON.stringify({ account_id: id, registration_only: true })), 30n * TGAS, 12_500_000_000_000_000_000_000n);
   if (!(await registered(sellerNear()))) await step(`registered ${sellerNear()} on ${WNEAR}`, () => nearSend(OWNER, s.ownerKey, WNEAR, [storage(sellerNear())]));
+  s.v2.sellers ??= {};
+  for (const sl of SELLERS) {
+    s.v2.sellers[sl.slug] ??= { nearKey: KeyPair.fromRandom("ed25519").toString(), sepoliaKey: generatePrivateKey() };
+    saveState(s);
+    const acct = sellerAccount(sl);
+    if (!(await accountExists(acct)))
+      await step(`created seller ${sl.name} (${acct})`, () => nearSend(OWNER, s.ownerKey, acct, [actionCreators.createAccount(), actionCreators.transfer(NEAR / 10n), actionCreators.addKey(KeyPair.fromString(s.v2.sellers[sl.slug].nearKey).getPublicKey(), actionCreators.fullAccessKey())]));
+    if (!(await registered(acct))) await step(`registered ${acct} on ${WNEAR}`, () => nearSend(OWNER, s.ownerKey, WNEAR, [storage(acct)]));
+  }
 
   for (const w of swarms(s)) {
     const o = { id: w.ownerId, key: w.ownerKeyStr };
@@ -343,6 +383,7 @@ async function upgrade() {
       await step(`${w.vault}: settlement in wNEAR, seller allowed, agent budgets`, () => nearSend(o.id, o.key, w.vault, [
         fc("set_settlement", [WNEAR.length, ...enc(WNEAR), WNEAR.length, ...enc(WNEAR)]),
         fc("allow_seller", enc(sellerNear())),
+        ...SELLERS.map((sl) => fc("allow_seller", enc(sellerAccount(sl)))),
         ...w.agents.map((a, i) => fc("set_budget", [i, ...u128le(5000n * UNIT)])), // 0.5 wNEAR each
       ]));
     }
@@ -356,7 +397,7 @@ async function upgrade() {
     ]));
   }
   await topUpAgentsNear(s);
-  log("upgrade done. Vaults:", swarms(s).map((w) => w.vault).join(", "), "· seller:", sellerNear());
+  log("upgrade done. Vaults:", swarms(s).map((w) => w.vault).join(", "), "· sellers:", SELLERS.map(sellerAccount).join(", "));
 }
 
 // agents pay their own NEAR gas; a request_sign prepays 300 Tgas
@@ -403,16 +444,19 @@ async function round() {
   const write = (fn, args) => wallet.writeContract({ address: CONTRACT, abi, functionName: fn, args });
   const seed = `${Date.now()}`;
   const lot = LOTS[market.stats.rounds % LOTS.length];
+  const sl = s.v2.sellers ? SELLERS[market.stats.rounds % SELLERS.length] : null;
+  const sellerWallet = sl ? createWalletClient({ account: privateKeyToAccount(s.v2.sellers[sl.slug].sepoliaKey), chain: sepolia, transport: http(SEPOLIA_RPC) }) : wallet;
+  const payTo = sl ? sellerAccount(sl) : sellerNear();
   const W = swarms(s);
   const agents = W.flatMap((w) => w.agents);
-  const rec = { version: 2, started: new Date().toISOString(), lot: lot.item, reserve: lot.reserve, estimate: lot.estimate, owners: W.map((w) => ({ label: w.label, owner: w.ownerId, vault: w.vault })), agents: [], blocked: null, txs: [], payments: [], ai: null };
+  const rec = { version: 2, started: new Date().toISOString(), lot: lot.item, reserve: lot.reserve, estimate: lot.estimate, owners: W.map((w) => ({ label: w.label, owner: w.ownerId, vault: w.vault })), seller: sl ? { name: sl.name, near: payTo, sepolia: sellerWallet.account.address, payout: sl.payout } : null, agents: [], blocked: null, txs: [], payments: [], ai: null };
 
   const addrs = await Promise.all(agents.map(agentAddress));
-  await topUpEth(wallet, addrs);
+  await topUpEth(wallet, sl ? [...addrs, sellerWallet.account.address] : addrs);
   await topUpAgentsNear(s);
 
   // 1. seller opens the auction
-  let hash = await write("createAuction", [lot.item, BigInt(AUCTION_MIN * 60), BigInt(lot.reserve)]);
+  let hash = await sellerWallet.writeContract({ address: CONTRACT, abi, functionName: "createAuction", args: [lot.item, BigInt(AUCTION_MIN * 60), BigInt(lot.reserve)] });
   await publicClient.waitForTransactionReceipt({ hash });
   const id = await publicClient.readContract({ address: CONTRACT, abi, functionName: "auctionCount" });
   rec.auction = Number(id);
@@ -520,10 +564,15 @@ async function round() {
   }
   for (const p of payers) {
     if (p.units <= 0n) continue;
-    const r = await agentSettle(p.a, id, p.units, sellerNear());
-    rec.payments.push({ agent: p.a.account, units: Number(p.units), wnear: Number(p.units) / 10000, seller: sellerNear(), ok: r.ok, near: r.near, error: r.reason });
+    const r = await agentSettle(p.a, id, p.units, payTo);
+    rec.payments.push({ agent: p.a.account, units: Number(p.units), wnear: Number(p.units) / 10000, seller: payTo, ok: r.ok, near: r.near, error: r.reason });
     if (r.ok) market.stats.paid++;
-    log(`${p.a.name} paid ${Number(p.units) / 10000} wNEAR to ${sellerNear()}: ${r.ok ? "ok" : r.reason}`);
+    log(`${p.a.name} paid ${Number(p.units) / 10000} wNEAR to ${payTo}: ${r.ok ? "ok" : r.reason}`);
+  }
+  // 6. how this payment would reach the seller on mainnet through NEAR Intents (1Click dry-run quote)
+  if (sl && rec.payments.some((p) => p.ok)) {
+    try { rec.intents = await intentsQuote(sl, BigInt(rec.price) * UNIT); log(`NEAR Intents quote: ${rec.intents.amountInFormatted} wNEAR → ${rec.intents.amountOutFormatted} ${sl.payout.symbol} on ${sl.payout.chain} in ~${rec.intents.timeEstimate}s`); }
+    catch (e) { log("NEAR Intents quote unavailable:", e.message); }
   }
 
   // TEE proofs go to their own file (attestation quotes are large); the dashboard links it
@@ -541,7 +590,8 @@ async function round() {
   market.contract = CONTRACT;
   market.vault = W[0].vault;
   market.vaults = W.map((w) => w.vault);
-  market.seller = sellerNear();
+  market.seller = payTo;
+  market.sellers = SELLERS.map((x) => ({ name: x.name, near: sellerAccount(x), payout: x.payout }));
   market.rounds.unshift(rec);
   market.rounds = market.rounds.slice(0, 120);
   saveJson(OUT_FILE, market);

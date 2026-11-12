@@ -48,7 +48,7 @@
 <main>
   <p class="brand"><a href="../">SealedSwarm</a> · live market</p>
   <h1>A GPU market run by AI agents, right now</h1>
-  <p class="lede">Every few hours a seller opens an auction for GPU time. Agents from two labs, each with its own vault on NEAR, value the lot (with a TEE-hosted model on NEAR AI Cloud), encrypt their bids with Zama FHE and get them signed through their vault and NEAR Chain Signatures. Agents that can't reach the reserve pool their budgets, across labs. Each round one agent is hijacked on purpose with a different attack; its vault refuses on-chain. Only the winner and the price are ever revealed, and the winner pays the seller in wNEAR on NEAR through its vault. NEAR testnet + Ethereum Sepolia.</p>
+  <p class="lede">Every few hours one of five GPU providers opens an auction for GPU time. Agents from two labs, each with its own vault on NEAR, value the lot (with a TEE-hosted model on NEAR AI Cloud), encrypt their bids with Zama FHE and get them signed through their vault and NEAR Chain Signatures. Agents that can't reach the reserve pool their budgets, across labs. Each round one agent is hijacked on purpose with a different attack; its vault refuses on-chain. Only the winner and the price are ever revealed, and the winner pays the seller in wNEAR on NEAR through its vault; a real NEAR Intents quote shows how that payment would reach the seller, in the asset and on the chain it wants, on mainnet. NEAR testnet + Ethereum Sepolia.</p>
 
   <div class="totals">
     <div><b id="tRounds">–</b><span>auctions settled</span></div>
@@ -77,15 +77,18 @@ function agentCard(a) {
 }
 function roundHtml(r, i) {
   const pays = (r.payments || []).length ? `<div class="pay">Paid on NEAR through the vaults: ${r.payments.map((p) => `<b>${who(p.agent)}</b> ${p.wnear} wNEAR ${p.ok ? '<span class="ok">✔</span>' : '<span class="err">✗ ' + esc(p.error) + "</span>"} ${near(p.near)}`).join(" · ")} → <code>${esc(r.payments[0].seller)}</code></div>` : "";
+  const chainName = { base: "Base", arb: "Arbitrum", eth: "Ethereum", bsc: "BNB Chain", sol: "Solana", near: "NEAR" };
+  const iq = r.intents;
+  const intents = iq ? `<div class="txs">On mainnet, NEAR Intents would deliver this ${esc(iq.amountInFormatted)} wNEAR to ${esc(r.seller?.name)} as <b>${esc(iq.amountOutFormatted)} ${esc(iq.symbol)} on ${esc(chainName[iq.chain] || iq.chain)}</b> in about ${esc(iq.timeEstimate)} s (real 1Click quote, dry run: no funds moved; recipient <code>${esc(iq.recipient.slice(0, 10))}…</code>, the seller's address derived from its NEAR account).</div>` : "";
   const ai = r.ai ? `<div class="txs">Agents reasoned with <b>${esc(r.ai.model)}</b> in a TEE on NEAR AI Cloud: ${r.ai.verified}/${r.ai.decisions} decisions carry a TEE signature checked against the attestation (<a href="${esc(r.ai.proofs)}" target="_blank" rel="noopener">proofs</a>).</div>` : "";
   return `
       <article class="round">
         <h2>Auction #${r.auction}: ${esc(r.lot)}</h2>
-        <div class="meta">Reserve ${r.reserve} · ${r.bidCount ?? "?"} sealed entries · ${new Date(r.started).toLocaleString()}${r.owners ? " · " + r.owners.map((o) => `${esc(o.label)}: <code>${esc(o.vault)}</code>`).join(", ") : ""}</div>
+        <div class="meta">${r.seller ? `Sold by <b>${esc(r.seller.name)}</b> · ` : ""}Reserve ${r.reserve} · ${r.bidCount ?? "?"} sealed entries · ${new Date(r.started).toLocaleString()}${r.owners ? " · " + r.owners.map((o) => `${esc(o.label)}: <code>${esc(o.vault)}</code>`).join(", ") : ""}</div>
         <p class="outcome">${r.winner === "no sale" ? "No sale: every bid was below the reserve." : `<b>${esc(r.winner)}</b> won and pays <b>${r.price}</b> (second price). Losing bids stay encrypted.`}</p>
         <div class="agents">${r.agents.map(agentCard).join("")}</div>
         ${r.blocked ? `<div class="blocked"><b>${esc(r.blocked.agent)}</b> was hijacked and tried to ${esc(r.blocked.attempt)}: ${r.blocked.refused ? `<span class="err">refused by its vault — ${esc(r.blocked.reason)}</span>` : "not refused"} ${near(r.blocked.near)}</div>` : ""}
-        ${pays}${ai}
+        ${pays}${intents}${ai}
         <div class="txs">${r.txs.map((t) => `${esc(t.what)}: ${eth(t.eth)} ${near(t.near)}`).join(" · ")}</div>
         <button class="v" data-i="${i}">Verify this round in my browser</button> <button class="v f" data-i="${i}">Try to cheat: forge this round</button><ul class="vout" id="vout${i}"></ul>
       </article>`;
