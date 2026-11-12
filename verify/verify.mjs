@@ -104,8 +104,15 @@ async function guard(section, claim, fn) {
 }
 
 // ---------- NEAR transaction decoding ----------
+// old transactions are only on archival nodes; those rate-limit, so retry patiently
+const NEAR_ARCHIVAL = (arg("near-archival", "") || "https://archival-rpc.testnet.fastnear.com,https://archival-rpc.testnet.near.org").split(",");
 async function nearTx(hash, sender) {
-  return near("tx", { tx_hash: hash, sender_account_id: sender, wait_until: "NONE" });
+  let last;
+  for (let attempt = 0; attempt < 6; attempt++) {
+    try { return await post([NEAR_ARCHIVAL[attempt % NEAR_ARCHIVAL.length]], "tx", { tx_hash: hash, sender_account_id: sender, wait_until: "NONE" }, "NEAR tx"); }
+    catch (e) { last = e; await new Promise((r) => setTimeout(r, 1500 * (attempt + 1))); }
+  }
+  throw last;
 }
 function requestSignArgs(tx) {
   const a = tx.transaction.actions.find((x) => x.FunctionCall)?.FunctionCall;
