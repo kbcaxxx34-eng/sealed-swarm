@@ -28,7 +28,8 @@ const here = (p) => new URL(p, import.meta.url);
 const arg = (k, d) => { const i = process.argv.indexOf(`--${k}`); return i > 0 ? process.argv[i + 1] : (process.env[k.toUpperCase().replace(/-/g, "_")] ?? d); };
 
 const AUCTION = "0x4994b9537D50756c5858399bDd460Ba70BE878cc";
-const V1_VAULTS = ["vault.ssmarket-anderssonm.testnet", "ssvault-anderssonm.testnet"]; // + v2 vaults listed by the market
+// earlier vaults (their rounds stay on the dashboard) + the vaults the market lists now
+const V1_VAULTS = ["vault.ssmarket-anderssonm.testnet", "ssvault-anderssonm.testnet", "swarm.ssmarket-anderssonm.testnet", "swarm.lab2.ssmarket-anderssonm.testnet"];
 const UNIT = 100000000000000000000n; // 1 auction unit = 0.0001 wNEAR
 const MPC = "v1.signer-prod.testnet";
 const PATH_PREFIX = "sealedswarm-agent-";
@@ -82,6 +83,16 @@ async function ethCall(fn, args = []) {
   const data = encodeFunctionData({ abi, functionName: fn, args });
   const out = await eth("eth_call", [{ to: AUCTION, data }, "latest"]);
   return decodeFunctionResult({ abi, functionName: fn, data: out });
+}
+// Zama's ACL on Sepolia: who may decrypt each ciphertext handle
+const ACL = "0xf0Ffdc93b7E186bC2f8CB3dAA75D86d1930A433D";
+const aclAbi = [
+  { type: "function", name: "isAllowedForDecryption", stateMutability: "view", inputs: [{ name: "h", type: "bytes32" }], outputs: [{ type: "bool" }] },
+  { type: "function", name: "isAllowed", stateMutability: "view", inputs: [{ name: "h", type: "bytes32" }, { name: "a", type: "address" }], outputs: [{ type: "bool" }] },
+];
+async function aclCall(fn, args) {
+  const data = encodeFunctionData({ abi: aclAbi, functionName: fn, args });
+  return decodeFunctionResult({ abi: aclAbi, functionName: fn, data: await eth("eth_call", [{ to: ACL, data }, "latest"]) });
 }
 const poolAddress = (id, poolId) => getAddress("0x" + keccak256(encodeAbiParameters([{ type: "string" }, { type: "address" }, { type: "uint256" }, { type: "uint256" }], ["SealedSwarm.pool", AUCTION, BigInt(id), BigInt(poolId)])).slice(-40));
 
@@ -169,7 +180,8 @@ async function proveSignedAction(section, label, nearHash, sender, ethHash, vaul
 // ---------- checks ----------
 const sha = (buf) => base58(crypto.createHash("sha256").update(buf).digest());
 const WASM = {
-  [sha(fs.readFileSync(here("../near-vault/build/swarm_vault.wasm")))]: { v: 2, file: "near-vault/build/swarm_vault.wasm", methods: ["request_sign", "settle"] },
+  [sha(fs.readFileSync(here("../near-vault/build/swarm_vault.wasm")))]: { v: 3, file: "near-vault/build/swarm_vault.wasm", methods: ["request_sign", "settle"] },
+  [sha(fs.readFileSync(here("../near-vault/build/swarm_vault_v2.wasm")))]: { v: 2, file: "near-vault/build/swarm_vault_v2.wasm (v2, commit 8a823d2)", methods: ["request_sign", "settle"] },
   [sha(fs.readFileSync(here("../near-vault/build/swarm_vault_v1.wasm")))]: { v: 1, file: "near-vault/build/swarm_vault_v1.wasm (v1, commit 645f32f)", methods: ["request_sign"] },
 };
 const vaultOf = (agentAccount) => agentAccount.split(".").slice(1).join(".");
@@ -257,7 +269,7 @@ async function main() {
   // 7–11: the live market
   console.log(`\nmarket data: ${source}, ${market.rounds.length} rounds, updated ${market.updated}\n`);
   const base = MARKET_URL.replace(/[^/]*$/, "");
-  let signed = 0, refusals = 0, payments = 0, aiChecked = 0;
+  let signed = 0, refusals = 0, payments = 0, aiChecked = 0, sealedBids = 0;
   const v1Vault = market.vault && !market.vaults ? market.vault : "vault.ssmarket-anderssonm.testnet";
   const acctOf = (round, name) => (name.includes(".") ? name : round.agents.find((x) => x.name === name)?.account ?? `${name}.${v1Vault}`);
 
@@ -280,6 +292,27 @@ async function main() {
         record(sec, `pool #${round.pool.id} members are the named agents`, JSON.stringify(members) === JSON.stringify(expected), `${round.pool.members.join(" + ")} = ${members.map(short).join(", ")}`);
       });
     }
+    // privacy: no entrant's amount may be publicly decryptable; only the winner and the price are
+    await guard(sec, "every bid stays sealed: only the winner and the price are public", async () => {
+      const id = BigInt(round.auction);
+      const [wh, ph] = await ethCall("getResultHandles", [id]);
+      const resultPublic = (await aclCall("isAllowedForDecryption", [wh])) && (await aclCall("isAllowedForDecryption", [ph]));
+      const entrants = round.agents.filter((x) => x.ok && x.eth);
+      let sealedOk = 0; const leaks = [];
+      const others = await Promise.all(entrants.map((x) => addressOf(x.account)));
+      for (const [i, x] of entrants.entries()) {
+        const h = await ethCall("getBid", [id, others[i]]);
+        const pub = await aclCall("isAllowedForDecryption", [h]);
+        const own = await aclCall("isAllowed", [h, others[i]]);
+        const stranger = others.find((o, j) => j !== i) ?? others[i];
+        const foreign = stranger !== others[i] && (await aclCall("isAllowed", [h, stranger]));
+        if (!pub && own && !foreign) sealedOk++; else leaks.push(x.name);
+      }
+      let poolNote = "";
+      if (round.pool) { const t = await ethCall("getPoolTotal", [id, BigInt(round.pool.id)]); const tp = await aclCall("isAllowedForDecryption", [t]); poolNote = `, pool total ${tp ? "PUBLIC" : "sealed"}`; if (tp) leaks.push("pool total"); }
+      sealedBids += sealedOk;
+      record(sec, "every bid stays sealed: only the winner and the price are public", resultPublic && leaks.length === 0, `${sealedOk}/${entrants.length} bids: not publicly decryptable, decryptable only by their own bidder (Zama ACL ${short(ACL)})${poolNote}; winner + price public: ${resultPublic}${leaks.length ? "; LEAK: " + leaks.join(", ") : ""}`);
+    });
     for (const ag of round.agents) {
       if (!ag.ok || !ag.near || !ag.eth) continue;
       signed++;
@@ -341,7 +374,7 @@ async function main() {
 
   // ---------- write report ----------
   const passed = rows.filter((r) => r.ok).length;
-  const report = { generated: new Date().toISOString(), auction: AUCTION, vaults, market: { source, updated: market.updated, rounds: market.rounds.length, signedActions: signed, hijacksRefused: refusals, paymentsOnNear: payments, teeDecisions: aiChecked }, passed, failed: failures, rows };
+  const report = { generated: new Date().toISOString(), auction: AUCTION, vaults, market: { source, updated: market.updated, rounds: market.rounds.length, signedActions: signed, sealedBidsChecked: sealedBids, hijacksRefused: refusals, paymentsOnNear: payments, teeDecisions: aiChecked }, passed, failed: failures, rows };
   fs.writeFileSync(`${OUT_DIR}/report.json`, JSON.stringify(report, null, 2));
   const extra = [payments ? `${payments} wNEAR payments confirmed on NEAR` : "", aiChecked ? `${aiChecked} agent decisions proven to come from an attested TEE` : ""].filter(Boolean).join("; ");
   const md = [
@@ -349,7 +382,7 @@ async function main() {
     ``,
     `Generated ${report.generated} by \`verify/verify.mjs\` from public RPC only (no keys).`,
     ``,
-    `**${passed} passed, ${failures} failed.** ${signed} agent actions traced from NEAR vault → NEAR MPC signature → Sepolia transaction; ${refusals} hijack attempts confirmed refused on NEAR${extra ? "; " + extra : ""}.`,
+    `**${passed} passed, ${failures} failed.** ${sealedBids} bids checked on Zama's ACL: none can be decrypted by anyone but its bidder. ${signed} agent actions traced from NEAR vault → NEAR MPC signature → Sepolia transaction; ${refusals} hijack attempts confirmed refused on NEAR${extra ? "; " + extra : ""}.`,
     ``,
     `Market data: ${source} (updated ${market.updated}).`,
     ``,

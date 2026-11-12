@@ -104,6 +104,12 @@ test("pool flow: join once, submit only after joining, submit once", () => {
   expectPanic(() => vm.call("request_sign", { input: tx({ auctionId: 3n, fn: "submitPool" }), predecessor: acct(0) }), "already submitted");
 });
 
+test("an agent that bid alone cannot submit a pool (found by the fuzz test)", () => {
+  const { vm } = setup();
+  vm.call("request_sign", { input: tx({ auctionId: 5n }), predecessor: acct(0) }); // solo bid
+  expectPanic(() => vm.call("request_sign", { input: tx({ auctionId: 5n, fn: "submitPool" }), predecessor: acct(0) }), "has not joined");
+});
+
 test("rejects callers that are not this vault's agents (including the owner)", () => {
   const { vm } = setup();
   expectPanic(() => vm.call("request_sign", { input: tx(), predecessor: "mallory.testnet" }), "not one of this vault's agents");

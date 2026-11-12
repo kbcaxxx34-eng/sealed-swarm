@@ -333,8 +333,10 @@ export function request_sign(): void {
   usedKey[1] = <u8>agent;
   usedKey.set(d.subarray(4, 36), 2);
   const entered = sgetBytesKey(usedKey);
+  const joinKey = new Uint8Array(34); joinKey.set(usedKey); joinKey[0] = 0x6a; // 'j': joined a pool here
   if (isSubmit) {
-    if (!entered) { fail("submitPool: this agent has not joined a pool in this auction"); return; }
+    // only an agent that joined a pool in this auction (not one that bid alone) may submit a pool
+    if (!sgetBytesKey(joinKey)) { fail("submitPool: this agent has not joined a pool in this auction"); return; }
     const sk = new Uint8Array(34); sk.set(usedKey); sk[0] = 0x73; // 's'
     if (sgetBytesKey(sk)) { fail("this agent already submitted a pool in this auction"); return; }
     const one = new Uint8Array(1); one[0] = 1;
@@ -343,6 +345,7 @@ export function request_sign(): void {
     if (entered) { fail("this agent already bid on this auction"); return; }
     const one = new Uint8Array(1); one[0] = 1;
     ssetBytesKey(usedKey, one);
+    if (isJoin) ssetBytesKey(joinKey, one);
   }
 
   // payload = keccak256(0x02 || rlp(...)), signed for this agent's path
