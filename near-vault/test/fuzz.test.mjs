@@ -101,7 +101,7 @@ function policyViolations(caller, bytes) {
   return { agent, v, t, kind, key };
 }
 
-console.log(`SwarmVault fuzz (compiled wasm, ${N.toLocaleString("en")} random requests)`);
+console.log(`SwarmVault fuzz [V3][V4][S3][S5] (compiled wasm, ${N.toLocaleString("en")} random requests)`);
 for (let n = 0; n < N; n++) {
   if (paused ? chance(0.2) : chance(0.004)) { paused = !paused; vm.call("pause", { input: new Uint8Array([paused ? 1 : 0]), predecessor: OWNER }); } // short pauses
   const { caller, bytes } = buildRequest();

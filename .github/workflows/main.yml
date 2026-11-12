@@ -28,6 +28,8 @@ jobs:
       - run: npm run compile
       - name: Auction + buyer-pool tests (FHE mock) and NEAR vault tests
         run: npm run test:all
+      - name: Every rule in RULES.md has a test
+        run: npm run rules
       - name: Vault wasm build is reproducible (rebuilt wasm = committed wasm = deployed code)
         run: git diff --exit-code -- near-vault/build/swarm_vault.wasm app/src/swarm_vault.wasm
       - name: Earlier vault wasms (still running on earlier vaults) are the ones built at commits 645f32f and 8a823d2

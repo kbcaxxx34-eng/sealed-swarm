@@ -85,7 +85,8 @@
     "deploy:sepolia": "hardhat deploy --network sepolia",
     "verify:sepolia": "hardhat verify --network sepolia",
     "test:all": "hardhat test && cd near-vault && npm install && npm run build && npm test",
-    "simulate": "hardhat test simulation/market.sim.ts"
+    "simulate": "hardhat test simulation/market.sim.ts",
+    "rules": "node scripts/rules-coverage.mjs"
   },
   "overrides": {
     "ws@>=7.0.0 <7.5.10": ">=7.5.10",

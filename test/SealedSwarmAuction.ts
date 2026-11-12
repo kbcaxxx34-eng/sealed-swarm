@@ -49,7 +49,7 @@ describe("SealedSwarmAuction", function () {
     return await c.auctionCount();
   }
 
-  it("highest bidder wins and pays the second-highest bid", async function () {
+  it("[A5][A7] highest bidder wins and pays the second-highest bid", async function () {
     const id = await create();
     await bid(c, addr, id, a1, 120);
     await bid(c, addr, id, a2, 300);
@@ -61,7 +61,7 @@ describe("SealedSwarmAuction", function () {
     expect(a.revealed).to.eq(true);
   });
 
-  it("works regardless of bid order (winner first, runner-up last)", async function () {
+  it("[A5] works regardless of bid order (winner first, runner-up last)", async function () {
     const id = await create();
     await bid(c, addr, id, a1, 500);
     await bid(c, addr, id, a2, 100);
@@ -72,7 +72,7 @@ describe("SealedSwarmAuction", function () {
     expect(a.price).to.eq(450n);
   });
 
-  it("price never goes below the reserve", async function () {
+  it("[A1][A5] price never goes below the public reserve", async function () {
     const id = await create(200);
     await bid(c, addr, id, a1, 250);
     await bid(c, addr, id, a2, 150);
@@ -82,7 +82,7 @@ describe("SealedSwarmAuction", function () {
     expect(a.price).to.eq(200n);
   });
 
-  it("no sale when every bid is below the reserve", async function () {
+  it("[A5] no sale when every bid is below the reserve", async function () {
     const id = await create(1000);
     await bid(c, addr, id, a1, 900);
     await endAuction();
@@ -91,7 +91,7 @@ describe("SealedSwarmAuction", function () {
     expect(a.price).to.eq(0n);
   });
 
-  it("ties keep the earlier bidder", async function () {
+  it("[A5] ties keep the earlier bidder", async function () {
     const id = await create();
     await bid(c, addr, id, a1, 300);
     await bid(c, addr, id, a2, 300);
@@ -101,7 +101,7 @@ describe("SealedSwarmAuction", function () {
     expect(a.price).to.eq(300n);
   });
 
-  it("a single bidder pays the reserve", async function () {
+  it("[A5] a single bidder pays the reserve", async function () {
     const id = await create(50);
     await bid(c, addr, id, a1, 400);
     await endAuction();
@@ -110,7 +110,7 @@ describe("SealedSwarmAuction", function () {
     expect(a.price).to.eq(50n);
   });
 
-  it("each bidder can decrypt only its own bid", async function () {
+  it("[A3][A6] each bidder can decrypt only its own bid", async function () {
     const id = await create();
     await bid(c, addr, id, a1, 77);
     const h = await c.getBid(id, a1.address);
@@ -124,7 +124,7 @@ describe("SealedSwarmAuction", function () {
     expect(failed).to.eq(true);
   });
 
-  it("rejects a second bid from the same address", async function () {
+  it("[A2] rejects a second bid from the same address", async function () {
     const id = await create();
     await bid(c, addr, id, a1, 10);
     const enc = await fhevm.createEncryptedInput(addr, a1.address).add64(20).encrypt();
@@ -134,7 +134,7 @@ describe("SealedSwarmAuction", function () {
     );
   });
 
-  it("rejects bids after the end time and early close", async function () {
+  it("[A1][A5] rejects bids after the end time and early close", async function () {
     const id = await create();
     await expect(c.close(id)).to.be.revertedWithCustomError(c, "AuctionNotEnded");
     await endAuction();
@@ -145,7 +145,7 @@ describe("SealedSwarmAuction", function () {
     );
   });
 
-  it("rejects a forged reveal", async function () {
+  it("[A6] rejects a forged reveal", async function () {
     const id = await create();
     await bid(c, addr, id, a1, 100);
     await bid(c, addr, id, a2, 200);
@@ -157,7 +157,7 @@ describe("SealedSwarmAuction", function () {
     await expect(c.reveal(id, forged, res.decryptionProof)).to.be.reverted;
   });
 
-  it("cannot reveal before close or twice", async function () {
+  it("[A6] cannot reveal before close or twice", async function () {
     const id = await create();
     await bid(c, addr, id, a1, 100);
     await expect(c.reveal(id, "0x", "0x")).to.be.revertedWithCustomError(c, "NotClosed");

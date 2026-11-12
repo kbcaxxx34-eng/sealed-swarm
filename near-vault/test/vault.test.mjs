@@ -39,7 +39,7 @@ function test(name, fn) { fn(); passed++; console.log("  ✔ " + name); }
 
 console.log("SwarmVault (wasm, mocked NEAR host)");
 
-test("configure creates one funded sub-account per agent with a key that can only call request_sign and settle", () => {
+test("[V1] configure creates one funded sub-account per agent with a key that can only call request_sign and settle", () => {
   const { vm, r } = setup();
   assert.equal(r.promises.length, 3);
   r.promises.forEach((p, i) => {
@@ -61,14 +61,14 @@ test("configure creates one funded sub-account per agent with a key that can onl
   assert.equal(cfg.paused, false);
 });
 
-test("configure runs once; only the owner can pause; agent names are checked", () => {
+test("[V1][V5] configure runs once; only the owner can pause; agent names are checked", () => {
   const { vm } = setup();
   expectPanic(() => vm.call("configure", { input: configArgs({ auction: AUCTION, agents: AGENTS }), predecessor: "mallory.testnet" }), "already configured");
   expectPanic(() => vm.call("pause", { input: new Uint8Array([1]), predecessor: "mallory.testnet" }), "only the owner");
   expectPanic(() => makeVm({ accountId: VAULT }).call("configure", { input: configArgs({ auction: AUCTION, agents: [{ name: "Bad.Name", publicKey: new Uint8Array(32) }] }) }), "a-z and 0-9");
 });
 
-test("a valid bid from an agent sub-account is sent to the MPC signer with that agent's path", () => {
+test("[V2][V4] a valid bid from an agent sub-account is sent to the MPC signer with that agent's path", () => {
   const { vm } = setup();
   const t = tx();
   const r = vm.call("request_sign", { input: t, predecessor: acct(1) });
@@ -83,7 +83,7 @@ test("a valid bid from an agent sub-account is sent to the MPC signer with that 
   assert.equal("0x" + args.request.payload_v2.Ecdsa, keccak256(t));
 });
 
-test("each agent enters an auction once, but can enter many auctions", () => {
+test("[V3][A2] each agent enters an auction once, but can enter many auctions", () => {
   const { vm } = setup();
   vm.call("request_sign", { input: tx({ auctionId: 7n }), predecessor: acct(0) });
   expectPanic(() => vm.call("request_sign", { input: tx({ auctionId: 7n }), predecessor: acct(0) }), "already bid");
@@ -94,7 +94,7 @@ test("each agent enters an auction once, but can enter many auctions", () => {
   assert.equal(vm.call("has_bid", { input: new Uint8Array([1, ...hexToBytes(id32(7n))]) }).ret, "false");
 });
 
-test("pool flow: join once, submit only after joining, submit once", () => {
+test("[V3] pool flow: join once, submit only after joining, submit once", () => {
   const { vm } = setup();
   expectPanic(() => vm.call("request_sign", { input: tx({ auctionId: 3n, fn: "submitPool" }), predecessor: acct(0) }), "has not joined");
   vm.call("request_sign", { input: tx({ auctionId: 3n, fn: "joinPool" }), predecessor: acct(0) });
@@ -104,20 +104,20 @@ test("pool flow: join once, submit only after joining, submit once", () => {
   expectPanic(() => vm.call("request_sign", { input: tx({ auctionId: 3n, fn: "submitPool" }), predecessor: acct(0) }), "already submitted");
 });
 
-test("an agent that bid alone cannot submit a pool (found by the fuzz test)", () => {
+test("[V3] an agent that bid alone cannot submit a pool (found by the fuzz test)", () => {
   const { vm } = setup();
   vm.call("request_sign", { input: tx({ auctionId: 5n }), predecessor: acct(0) }); // solo bid
   expectPanic(() => vm.call("request_sign", { input: tx({ auctionId: 5n, fn: "submitPool" }), predecessor: acct(0) }), "has not joined");
 });
 
-test("rejects callers that are not this vault's agents (including the owner)", () => {
+test("[V3][V4] rejects callers that are not this vault's agents (including the owner)", () => {
   const { vm } = setup();
   expectPanic(() => vm.call("request_sign", { input: tx(), predecessor: "mallory.testnet" }), "not one of this vault's agents");
   expectPanic(() => vm.call("request_sign", { input: tx(), predecessor: "owner.testnet" }), "not one of this vault's agents");
   expectPanic(() => vm.call("request_sign", { input: tx(), predecessor: "atlas.vault.mallory.testnet" }), "not one of this vault's agents");
 });
 
-test("rejects other contracts, chains, ETH value and functions (prompt-injection attempts)", () => {
+test("[V3][V4] rejects other contracts, chains, ETH value and functions (prompt-injection attempts)", () => {
   const { vm } = setup();
   const s = acct(0);
   expectPanic(() => vm.call("request_sign", { input: tx({ to: "0x000000000000000000000000000000000000dEaD" }), predecessor: s }), "approved auction");
@@ -128,7 +128,7 @@ test("rejects other contracts, chains, ETH value and functions (prompt-injection
   expectPanic(() => vm.call("request_sign", { input: tx({ data: "0x" }), predecessor: s }), "only placeBid, joinPool and submitPool");
 });
 
-test("enforces the owner's gas caps", () => {
+test("[V3] enforces the owner's gas caps", () => {
   const { vm } = setup({ maxFee: 10_000_000_000n, maxGas: 2_000_000n });
   const s = acct(0);
   expectPanic(() => vm.call("request_sign", { input: tx({ maxFeePerGas: 10_000_000_001n }), predecessor: s }), "max fee");
@@ -136,7 +136,7 @@ test("enforces the owner's gas caps", () => {
   vm.call("request_sign", { input: tx({ maxFeePerGas: 10_000_000_000n, gas: 2_000_000n }), predecessor: s }); // exactly at the cap is fine
 });
 
-test("pause stops every agent until resumed", () => {
+test("[V3][V5] pause stops every agent until resumed", () => {
   const { vm } = setup();
   vm.call("pause", { input: new Uint8Array([1]) });
   expectPanic(() => vm.call("request_sign", { input: tx(), predecessor: acct(0) }), "paused");
@@ -144,7 +144,7 @@ test("pause stops every agent until resumed", () => {
   vm.call("request_sign", { input: tx(), predecessor: acct(0) });
 });
 
-test("rejects malformed transactions", () => {
+test("[V3][V4] rejects malformed transactions", () => {
   const { vm } = setup();
   const s = acct(0);
   const good = tx();
@@ -153,7 +153,7 @@ test("rejects malformed transactions", () => {
   expectPanic(() => vm.call("request_sign", { input: legacy, predecessor: s }), "EIP-1559");
 });
 
-test("self-configured vault (temporary key, deleted at setup): owner named in the arguments", () => {
+test("[V1][V5] self-configured vault (temporary key, deleted at setup): owner named in the arguments", () => {
   const vm = makeVm({ accountId: VAULT });
   expectPanic(() => vm.call("configure", { input: configArgs({ auction: AUCTION, agents: AGENTS }), predecessor: VAULT }), "needs an owner");
   vm.call("configure", { input: configArgs({ auction: AUCTION, agents: AGENTS, owner: "alice.testnet" }), predecessor: VAULT });
@@ -174,7 +174,7 @@ function settlementSetup() {
   return vm;
 }
 
-test("settlement: an agent pays an allowed seller through NEAR Intents, within its budget", () => {
+test("[S1][S3][S4] settlement: an agent pays an allowed seller through NEAR Intents, within its budget", () => {
   const vm = settlementSetup();
   const r = vm.call("settle", { input: settleArgs(4n, 250_000n, "gpu-seller.near"), predecessor: acct(0) });
   const [transfer, then] = r.promises;
@@ -193,7 +193,7 @@ test("settlement: an agent pays an allowed seller through NEAR Intents, within i
   assert.equal(JSON.parse(vm.call("get_config").ret).settlement_token, USDC);
 });
 
-test("settlement: refuses unknown sellers, other auctions, double payment, over-budget and non-agents", () => {
+test("[S3][S5] settlement: refuses unknown sellers, other auctions, double payment, over-budget and non-agents", () => {
   const vm = settlementSetup();
   expectPanic(() => vm.call("settle", { input: settleArgs(4n, 1n, "attacker.near"), predecessor: acct(0) }), "allowlist");
   expectPanic(() => vm.call("settle", { input: settleArgs(5n, 1n, "gpu-seller.near"), predecessor: acct(0) }), "did not enter");
@@ -206,7 +206,7 @@ test("settlement: refuses unknown sellers, other auctions, double payment, over-
   expectPanic(() => vm.call("allow_seller", { input: new TextEncoder().encode("attacker.near"), predecessor: acct(0) }), "only the owner");
 });
 
-test("settlement: a failed transfer restores the budget and allows a retry; the callback is private", () => {
+test("[S4] settlement: a failed transfer restores the budget and allows a retry; the callback is private", () => {
   const vm = settlementSetup();
   vm.call("settle", { input: settleArgs(4n, 400_000n, "gpu-seller.near"), predecessor: acct(0) });
   const cb = new Uint8Array([0, ...settleArgs(4n, 400_000n, "x").slice(0, 48)]);
@@ -219,7 +219,7 @@ test("settlement: a failed transfer restores the budget and allows a retry; the 
   assert.equal(vm.call("get_budget", { input: new Uint8Array([0]) }).ret, "600000");
 });
 
-test("settlement on testnet: with the token as both accounts the vault pays with NEP-141 ft_transfer (wrap.testnet)", () => {
+test("[S2][S4] settlement on testnet: with the token as both accounts the vault pays with NEP-141 ft_transfer (wrap.testnet)", () => {
   const { vm } = setup();
   vm.call("set_settlement", { input: settlementArgs("wrap.testnet", "wrap.testnet") });
   vm.call("allow_seller", { input: new TextEncoder().encode("gpus.seller.testnet") });
@@ -241,7 +241,7 @@ test("settlement on testnet: with the token as both accounts the vault pays with
   expectPanic(() => vm.call("settle", { input: settleArgs(9n, 1n, "gpus.seller.testnet"), predecessor: acct(0) }), "did not enter");
 });
 
-test("owner can point the vault at the mainnet MPC signer", () => {
+test("[V2][V5] owner can point the vault at the mainnet MPC signer", () => {
   const { vm } = setup();
   vm.call("set_mpc", { input: new TextEncoder().encode("v1.signer") });
   const r = vm.call("request_sign", { input: tx(), predecessor: acct(0) });
