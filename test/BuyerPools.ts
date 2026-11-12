@@ -50,7 +50,7 @@ describe("SealedSwarmAuction · buyer pools (encrypted group buying)", function 
     return c.getAuction(id);
   }
 
-  it("three small buyers pool their budgets and beat a bigger solo bidder", async function () {
+  it("[P1][P3] three small buyers pool their budgets and beat a bigger solo bidder", async function () {
     const id = await create();
     const p = await join(id, 0n, s[0], 40);
     await join(id, p, s[1], 50);
@@ -62,7 +62,7 @@ describe("SealedSwarmAuction · buyer pools (encrypted group buying)", function 
     expect(a.price).to.eq(100n); // pool pays the second price, not its total
   });
 
-  it("each member sees only its own contribution and the pool total, and can compute its share", async function () {
+  it("[P4][P5] each member sees only its own contribution and the pool total, and can compute its share", async function () {
     const id = await create();
     const p = await join(id, 0n, s[0], 40);
     await join(id, p, s[1], 60);
@@ -84,7 +84,7 @@ describe("SealedSwarmAuction · buyer pools (encrypted group buying)", function 
     expect(failed).to.eq(2);
   });
 
-  it("a losing pool just loses: the solo bidder pays the pool total as second price", async function () {
+  it("[P3][A5] a losing pool just loses: the solo bidder pays the pool total as second price", async function () {
     const id = await create();
     const p = await join(id, 0n, s[0], 10);
     await join(id, p, s[1], 20);
@@ -95,7 +95,7 @@ describe("SealedSwarmAuction · buyer pools (encrypted group buying)", function 
     expect(a.price).to.eq(30n);
   });
 
-  it("pools compete with each other", async function () {
+  it("[P3] pools compete with each other", async function () {
     const id = await create();
     const p1 = await join(id, 0n, s[0], 50);
     await join(id, p1, s[1], 50); // 100
@@ -108,7 +108,7 @@ describe("SealedSwarmAuction · buyer pools (encrypted group buying)", function 
     expect(a.price).to.eq(100n);
   });
 
-  it("an unsubmitted pool does not count", async function () {
+  it("[P3] an unsubmitted pool does not count", async function () {
     const id = await create();
     const p = await join(id, 0n, s[0], 500);
     await join(id, p, s[1], 500);
@@ -118,7 +118,7 @@ describe("SealedSwarmAuction · buyer pools (encrypted group buying)", function 
     expect((await c.getAuction(id)).bidCount).to.eq(1);
   });
 
-  it("enforces the pool rules", async function () {
+  it("[A2][P1][P3] enforces the pool rules", async function () {
     const id = await create();
     const p = await join(id, 0n, s[0], 10);
     // a member cannot also bid alone or join twice
@@ -135,7 +135,7 @@ describe("SealedSwarmAuction · buyer pools (encrypted group buying)", function 
     await expect(c.connect(s[2]).joinPool(id, 99n, e2.handles[0], e2.inputProof)).to.be.revertedWithCustomError(c, "UnknownPool");
   });
 
-  it("a pool total saturates instead of wrapping around", async function () {
+  it("[P2] a pool total saturates instead of wrapping around", async function () {
     const id = await create();
     const max = 2n ** 64n - 1n;
     const e1 = await fhevm.createEncryptedInput(addr, s[0].address).add64(max - 5n).encrypt();

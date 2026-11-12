@@ -1,0 +1,8 @@
+{
+  "name": "sealedswarm-verify",
+  "private": true,
+  "type": "module",
+  "description": "Rechecks SealedSwarm's deployment and live market against public NEAR testnet and Sepolia RPC, with no keys",
+  "scripts": { "verify": "node verify.mjs" },
+  "dependencies": { "chainsig.js": "^1.1.16", "viem": "^2.57.16" }
+}

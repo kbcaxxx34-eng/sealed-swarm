@@ -16,8 +16,8 @@
     .brand{font-weight:700;color:var(--slate);margin:0 0 10px}
     h1{margin:0;font-size:clamp(28px,4vw,44px);line-height:1.05;letter-spacing:-.02em;max-width:22ch}
     .lede{color:var(--slate);max-width:70ch;margin:12px 0 0}
-    .totals{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin:24px 0}
-    @media(max-width:700px){.totals{grid-template-columns:repeat(2,1fr)}}
+    .totals{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:12px;margin:24px 0}
+    @media(max-width:900px){.totals{grid-template-columns:repeat(3,1fr)}}@media(max-width:600px){.totals{grid-template-columns:repeat(2,1fr)}}
     .totals div{background:var(--sheet);border:1px solid var(--rule);border-radius:6px;padding:14px 16px}
     .totals b{display:block;font-size:30px;font-weight:700;font-variant-numeric:tabular-nums}
     .totals span{color:var(--slate);font-size:13.5px}
@@ -33,43 +33,105 @@
     .ok{color:var(--ok)} .err{color:var(--err)}
     code{font:12.5px var(--mono)}
     .empty{color:var(--slate)}
+    .pay{border-left:3px solid var(--ok);padding:6px 10px;background:#EEF7F2;font-size:13.5px;margin-top:8px}
+    .tag{display:inline-block;font-size:11.5px;padding:0 6px;border-radius:3px;background:#E3E8F1;color:var(--slate);margin-left:4px}
+    .tag.tee{background:#E6F4EE;color:var(--ok)}
+    button.v{font:inherit;font-size:13.5px;padding:5px 12px;border:1px solid var(--post);background:#fff;color:var(--post);border-radius:4px;cursor:pointer;margin-top:10px}
+    button.v:disabled{opacity:.6;cursor:wait}
+    .vout{list-style:none;margin:8px 0 0;padding:0;font-size:13px}
+    .vout li{padding:2px 0}
+    .how{background:var(--sheet);border:1px solid var(--rule);border-radius:6px;padding:14px 18px;margin:0 0 20px;font-size:14px}
+    .how b{color:var(--ink)}
   </style>
 </head>
 <body>
 <main>
   <p class="brand"><a href="../">SealedSwarm</a> · live market</p>
   <h1>A GPU market run by AI agents, right now</h1>
-  <p class="lede">Every few hours a seller opens an auction for GPU time. Four agents from a NEAR vault value the lot, encrypt their bids with Zama FHE and get them signed through the vault and NEAR Chain Signatures. Agents that can't reach the reserve pool their budgets. Each round one agent is hijacked on purpose and tries to pay an attacker; the vault refuses on-chain. Only the winner and the price are ever revealed. NEAR testnet + Ethereum Sepolia.</p>
+  <p class="lede">Every few hours a seller opens an auction for GPU time. Agents from two labs, each with its own vault on NEAR, value the lot (with a TEE-hosted model on NEAR AI Cloud), encrypt their bids with Zama FHE and get them signed through their vault and NEAR Chain Signatures. Agents that can't reach the reserve pool their budgets, across labs. Each round one agent is hijacked on purpose with a different attack; its vault refuses on-chain. Only the winner and the price are ever revealed, and the winner pays the seller in wNEAR on NEAR through its vault. NEAR testnet + Ethereum Sepolia.</p>
 
   <div class="totals">
     <div><b id="tRounds">–</b><span>auctions settled</span></div>
     <div><b id="tBids">–</b><span>sealed bids and pools</span></div>
     <div><b id="tPools">–</b><span>encrypted buyer pools</span></div>
     <div><b id="tBlocked">–</b><span>hijack attempts blocked</span></div>
+    <div><b id="tPaid">–</b><span>wNEAR payments on NEAR</span></div>
+    <div><b id="tAi">–</b><span>agent decisions made in a TEE</span></div>
   </div>
+  <div class="how"><b>Don't trust this page — check it.</b> Each round has a <i>Verify</i> button, and the one above checks every round: your browser asks public NEAR and Sepolia nodes for the transactions and rebuilds every Sepolia transaction from the NEAR vault call and the NEAR MPC signature (same hash, signer = the agent's address derived from its vault), confirms on Zama's access-control contract that every bid is decryptable only by its own bidder (only the winner and price are public), that each attack failed on NEAR, each payment on NEAR, and each TEE signature. <i>Try to cheat</i> forges a round's claims and shows the same checks refusing them. Or run the full no-key verifier: <code>cd verify &amp;&amp; npm ci &amp;&amp; npm run verify</code> in the <a href="https://github.com/kbcaxxx34-eng/sealed-swarm">repository</a> (its daily result: <a href="https://github.com/kbcaxxx34-eng/sealed-swarm/blob/main/verify/REPORT.md">verify/REPORT.md</a>).</div>
+  <p><button class="v" id="vall">Verify every round in my browser</button></p><ul class="vout" id="valll"></ul>
   <p class="empty" id="updated"></p>
   <div id="rounds"><p class="empty">Loading the market…</p></div>
 </main>
-<script>
+<script type="module">
+import { verifyRound, forge } from "./verify-browser.js";
 const esc = (t) => String(t ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 const near = (h) => h ? `<a href="https://testnet.nearblocks.io/txns/${esc(h)}" target="_blank" rel="noopener">NEAR tx</a>` : "";
 const eth = (h) => h ? `<a href="https://sepolia.etherscan.io/tx/${esc(h)}" target="_blank" rel="noopener">Sepolia tx</a>` : "";
+const who = (acct) => esc(String(acct || "").split(".")[0]);
+let market = null;
+function agentCard(a) {
+  const brain = a.brain === "rules" ? "rule-based" : esc(String(a.brain).split("/").pop());
+  const tee = a.verified ? '<span class="tag tee">TEE-signed ✔</span>' : "";
+  return `<div><b>${esc(a.name)}</b>${a.owner ? `<span class="tag">${esc(a.owner)}</span>` : ""} ${esc(a.action)} <span class="${a.ok ? "ok" : "err"}">${a.ok ? "✔" : "✗ " + esc(a.error)}</span><br><span class="empty">${brain}${tee}: ${esc(a.reason)}</span><br>amount: sealed · ${near(a.near)} ${eth(a.eth)}</div>`;
+}
+function roundHtml(r, i) {
+  const pays = (r.payments || []).length ? `<div class="pay">Paid on NEAR through the vaults: ${r.payments.map((p) => `<b>${who(p.agent)}</b> ${p.wnear} wNEAR ${p.ok ? '<span class="ok">✔</span>' : '<span class="err">✗ ' + esc(p.error) + "</span>"} ${near(p.near)}`).join(" · ")} → <code>${esc(r.payments[0].seller)}</code></div>` : "";
+  const ai = r.ai ? `<div class="txs">Agents reasoned with <b>${esc(r.ai.model)}</b> in a TEE on NEAR AI Cloud: ${r.ai.verified}/${r.ai.decisions} decisions carry a TEE signature checked against the attestation (<a href="${esc(r.ai.proofs)}" target="_blank" rel="noopener">proofs</a>).</div>` : "";
+  return `
+      <article class="round">
+        <h2>Auction #${r.auction}: ${esc(r.lot)}</h2>
+        <div class="meta">Reserve ${r.reserve} · ${r.bidCount ?? "?"} sealed entries · ${new Date(r.started).toLocaleString()}${r.owners ? " · " + r.owners.map((o) => `${esc(o.label)}: <code>${esc(o.vault)}</code>`).join(", ") : ""}</div>
+        <p class="outcome">${r.winner === "no sale" ? "No sale: every bid was below the reserve." : `<b>${esc(r.winner)}</b> won and pays <b>${r.price}</b> (second price). Losing bids stay encrypted.`}</p>
+        <div class="agents">${r.agents.map(agentCard).join("")}</div>
+        ${r.blocked ? `<div class="blocked"><b>${esc(r.blocked.agent)}</b> was hijacked and tried to ${esc(r.blocked.attempt)}: ${r.blocked.refused ? `<span class="err">refused by its vault — ${esc(r.blocked.reason)}</span>` : "not refused"} ${near(r.blocked.near)}</div>` : ""}
+        ${pays}${ai}
+        <div class="txs">${r.txs.map((t) => `${esc(t.what)}: ${eth(t.eth)} ${near(t.near)}`).join(" · ")}</div>
+        <button class="v" data-i="${i}">Verify this round in my browser</button> <button class="v f" data-i="${i}">Try to cheat: forge this round</button><ul class="vout" id="vout${i}"></ul>
+      </article>`;
+}
 async function load() {
   try {
     const m = await (await fetch("market.json", { cache: "no-store" })).json();
-    for (const [k, id] of [["rounds", "tRounds"], ["bids", "tBids"], ["pools", "tPools"], ["blocked", "tBlocked"]]) document.getElementById(id).textContent = m.stats[k];
-    document.getElementById("updated").innerHTML = `Last round finished ${new Date(m.updated).toLocaleString()}. Vault <code>${esc(m.vault)}</code>, contract <a href="https://sepolia.etherscan.io/address/${esc(m.contract)}" target="_blank" rel="noopener"><code>${esc(m.contract)}</code></a>.`;
-    document.getElementById("rounds").innerHTML = m.rounds.map((r) => `
-      <article class="round">
-        <h2>Auction #${r.auction}: ${esc(r.lot)}</h2>
-        <div class="meta">Reserve ${r.reserve} · ${r.bidCount ?? "?"} sealed entries · ${new Date(r.started).toLocaleString()}</div>
-        <p class="outcome">${r.winner === "no sale" ? "No sale: every bid was below the reserve." : `<b>${esc(r.winner)}</b> won and pays <b>${r.price}</b> (second price). Losing bids stay encrypted.`}</p>
-        <div class="agents">${r.agents.map((a) => `<div><b>${esc(a.name)}</b> ${esc(a.action)} <span class="${a.ok ? "ok" : "err"}">${a.ok ? "✔" : "✗ " + esc(a.error)}</span><br><span class="empty">${esc(a.brain === "rules" ? "rule-based" : a.brain)}: ${esc(a.reason)}</span><br>amount: sealed · ${near(a.near)} ${eth(a.eth)}</div>`).join("")}</div>
-        ${r.blocked ? `<div class="blocked"><b>${esc(r.blocked.agent)}</b> was hijacked and tried to ${esc(r.blocked.attempt)}: ${r.blocked.refused ? `<span class="err">refused by the vault — ${esc(r.blocked.reason)}</span>` : "not refused"} ${near(r.blocked.near)}</div>` : ""}
-        <div class="txs">${r.txs.map((t) => `${esc(t.what)}: ${eth(t.eth)} ${near(t.near)}`).join(" · ")}</div>
-      </article>`).join("") || '<p class="empty">No rounds yet.</p>';
+    market = m;
+    for (const [k, id] of [["rounds", "tRounds"], ["bids", "tBids"], ["pools", "tPools"], ["blocked", "tBlocked"], ["paid", "tPaid"], ["aiDecisions", "tAi"]]) document.getElementById(id).textContent = m.stats[k] ?? 0;
+    document.getElementById("updated").innerHTML = `Last round finished ${new Date(m.updated).toLocaleString()}. Vaults <code>${esc((m.vaults || [m.vault]).join(", "))}</code>, contract <a href="https://sepolia.etherscan.io/address/${esc(m.contract)}" target="_blank" rel="noopener"><code>${esc(m.contract)}</code></a>.`;
+    if (document.querySelector("button.v:disabled") || document.querySelector(".vout li")) return; // keep results on screen
+    document.getElementById("rounds").innerHTML = m.rounds.map(roundHtml).join("") || '<p class="empty">No rounds yet.</p>';
   } catch (e) { document.getElementById("rounds").innerHTML = '<p class="empty">The market has not published its first round yet.</p>'; }
 }
+const line = (out, ok, text) => out.insertAdjacentHTML("beforeend", `<li class="${ok ? "ok" : "err"}">${ok ? "✔" : "✗"} ${esc(text)}</li>`);
+document.addEventListener("click", async (ev) => {
+  const b = ev.target.closest("button.v"); if (!b || !market || b.id === "vall") return;
+  const i = +b.dataset.i, out = document.getElementById("vout" + i);
+  b.disabled = true; out.innerHTML = "";
+  let good = 0, all = 0;
+  if (b.classList.contains("f")) {
+    // forged claims must FAIL: a verifier that passes everything proves nothing
+    const { forged, lies } = forge(market.rounds[i]);
+    b.textContent = "Checking the forged round…";
+    for (const l of lies) out.insertAdjacentHTML("beforeend", `<li class="empty">Forged: ${esc(l)}</li>`);
+    await verifyRound(forged, "", (ok, text) => { all++; if (!ok) good++; line(out, ok, text); });
+    b.disabled = false; b.textContent = `The verifier refused ${good} forged check${good === 1 ? "" : "s"} (${lies.length} lie${lies.length === 1 ? "" : "s"}) — run again`;
+    return;
+  }
+  b.textContent = "Checking against public NEAR and Sepolia nodes…";
+  await verifyRound(market.rounds[i], "", (ok, text) => { all++; if (ok) good++; line(out, ok, text); });
+  b.disabled = false; b.textContent = `Verified in your browser: ${good}/${all} checks passed — run again`;
+});
+document.getElementById("vall").addEventListener("click", async (ev) => {
+  const b = ev.currentTarget; if (!market) return;
+  const out = document.getElementById("valll"); out.innerHTML = ""; b.disabled = true;
+  let good = 0, all = 0;
+  for (const [k, r] of market.rounds.entries()) {
+    b.textContent = `Checking auction #${r.auction} (${k + 1} of ${market.rounds.length})…`;
+    let g = 0, a = 0;
+    await verifyRound(r, "", (ok) => { a++; if (ok) g++; });
+    good += g; all += a;
+    line(out, g === a, `auction #${r.auction} (${r.lot}): ${g}/${a} checks`);
+  }
+  b.disabled = false; b.textContent = `Every round verified in your browser: ${good}/${all} checks passed — run again`;
+});
 load(); setInterval(load, 60000);
 </script>
 </body>
