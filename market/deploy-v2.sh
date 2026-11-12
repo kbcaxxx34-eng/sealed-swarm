@@ -5,6 +5,16 @@
 # first error. Run as root:  bash deploy-v2.sh
 set -euo pipefail
 BRANCH="${BRANCH:-judge-ready}"
+LOG=/root/sealedswarm-deploy.log
+# Asks for the NEAR AI key once (hidden), then continues in the background so the terminal can be
+# closed (e.g. a phone). Follow it with: tail -f /root/sealedswarm-deploy.log
+if [ -z "${DETACHED:-}" ]; then
+  read -r -s -p "NEAR AI Cloud key (sk-...; hidden; Enter to skip): " K; echo
+  DETACHED=1 NEARAI_KEY_INPUT="$K" BRANCH="$BRANCH" nohup bash "$0" > "$LOG" 2>&1 < /dev/null &
+  unset K
+  echo "Running in the background — you can close this terminal. Log: $LOG"
+  sleep 20; tail -n 25 "$LOG"; exit 0
+fi
 say() { printf '\n\033[1m== %s\033[0m\n' "$*"; }
 die() { printf '\n\033[31mSTOP: %s\033[0m\n' "$*"; exit 1; }
 
@@ -49,9 +59,9 @@ echo "now at $(git -C "$REPO" rev-parse --short HEAD)"
 
 say "5/9 NEAR AI Cloud key (agents reason in a TEE)"
 if grep -q '^NEARAI_API_KEY=.' "$ENVF"; then echo "already set in $ENVF"; else
-  read -r -s -p "Paste your NEAR AI Cloud key (sk-...; hidden; Enter to skip): " K; echo
+  K="${NEARAI_KEY_INPUT:-}"
   if [ -n "$K" ]; then printf 'NEARAI_API_KEY=%s\n' "$K" >> "$ENVF"; export NEARAI_API_KEY="$K"; echo "added to $ENVF"; else echo "skipped: agents stay rule-based"; fi
-  unset K
+  unset K NEARAI_KEY_INPUT
 fi
 
 say "6/9 Stopping only the market service"
