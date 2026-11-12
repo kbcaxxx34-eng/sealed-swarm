@@ -232,7 +232,7 @@ async function main() {
     });
     if (round.pool) {
       await guard(sec, `pool #${round.pool.id} members are the named agents`, async () => {
-        const members = (await ethCall("getPoolMembers", [BigInt(round.auction), BigInt(round.pool.id)])).map(getAddress);
+        const members = (await ethCall("getPoolMembers", [BigInt(round.auction), BigInt(round.pool.id)])).map((x) => getAddress(x));
         const expected = await Promise.all(round.pool.members.map((n) => agentAddress(vault, indexOf(nameToAccount(n)))));
         record(sec, `pool #${round.pool.id} members are the named agents`, JSON.stringify(members) === JSON.stringify(expected), `${round.pool.members.join(" + ")} = ${members.map(short).join(", ")}`);
       });
