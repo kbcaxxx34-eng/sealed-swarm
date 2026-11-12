@@ -64,8 +64,8 @@ jobs:
             verify/REPORT.md
             verify/report.json
             verify/market.snapshot.json
-      - name: Commit the daily report (main only)
-        if: success() && github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+      - name: Commit the report (daily run or manual run)
+        if: success() && (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch')
         run: |
           git config user.name "sealedswarm-verifier"
           git config user.email "actions@users.noreply.github.com"
