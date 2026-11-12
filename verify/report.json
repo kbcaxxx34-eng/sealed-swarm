@@ -1,25 +1,29 @@
 {
-  "generated": "2026-11-12T00:34:35.403Z",
+  "generated": "2026-11-12T01:47:45.826Z",
   "auction": "0x4994b9537D50756c5858399bDd460Ba70BE878cc",
   "vaults": [
     "vault.ssmarket-anderssonm.testnet",
-    "ssvault-anderssonm.testnet"
+    "ssvault-anderssonm.testnet",
+    "swarm.ssmarket-anderssonm.testnet",
+    "swarm.lab2.ssmarket-anderssonm.testnet"
   ],
   "market": {
     "source": "https://sealedbid.lercomigo.space/swarm/market/market.json",
-    "updated": "2026-11-11T23:01:16.826Z",
-    "rounds": 13,
-    "signedActions": 65,
-    "hijacksRefused": 13
+    "updated": "2026-11-12T01:40:01.012Z",
+    "rounds": 14,
+    "signedActions": 74,
+    "hijacksRefused": 14,
+    "paymentsOnNear": 4,
+    "teeDecisions": 0
   },
-  "passed": 119,
+  "passed": 146,
   "failed": 0,
   "rows": [
     {
       "section": "NEAR vault",
       "claim": "vault.ssmarket-anderssonm.testnet: deployed code = repo wasm",
       "ok": true,
-      "evidence": "code_hash GxRvQnwhoJtEzjoNhkp2xWEEAm9mLJynY55CMwn6yDft, sha256(near-vault/build/swarm_vault.wasm) GxRvQnwhoJtEzjoNhkp2xWEEAm9mLJynY55CMwn6yDft"
+      "evidence": "code_hash GxRvQnwhoJtEzjoNhkp2xWEEAm9mLJynY55CMwn6yDft = sha256(near-vault/build/swarm_vault_v1.wasm (v1, commit 645f32f))"
     },
     {
       "section": "NEAR vault",
@@ -31,7 +35,7 @@
       "section": "NEAR vault",
       "claim": "vault.ssmarket-anderssonm.testnet: policy targets the auction and the NEAR MPC",
       "ok": true,
-      "evidence": "auction 0x4994b9537d50756c5858399bdd460ba70be878cc, mpc v1.signer-prod.testnet, 4 agents, max gas 3000000, max fee 50 gwei"
+      "evidence": "owner ssmarket-anderssonm.testnet, auction 0x4994b9537d50756c5858399bdd460ba70be878cc, mpc v1.signer-prod.testnet, 4 agents, max gas 3000000, max fee 50 gwei"
     },
     {
       "section": "NEAR vault",
@@ -61,7 +65,7 @@
       "section": "NEAR vault",
       "claim": "ssvault-anderssonm.testnet: deployed code = repo wasm",
       "ok": true,
-      "evidence": "code_hash GxRvQnwhoJtEzjoNhkp2xWEEAm9mLJynY55CMwn6yDft, sha256(near-vault/build/swarm_vault.wasm) GxRvQnwhoJtEzjoNhkp2xWEEAm9mLJynY55CMwn6yDft"
+      "evidence": "code_hash GxRvQnwhoJtEzjoNhkp2xWEEAm9mLJynY55CMwn6yDft = sha256(near-vault/build/swarm_vault_v1.wasm (v1, commit 645f32f))"
     },
     {
       "section": "NEAR vault",
@@ -73,7 +77,7 @@
       "section": "NEAR vault",
       "claim": "ssvault-anderssonm.testnet: policy targets the auction and the NEAR MPC",
       "ok": true,
-      "evidence": "auction 0x4994b9537d50756c5858399bdd460ba70be878cc, mpc v1.signer-prod.testnet, 3 agents, max gas 3000000, max fee 50 gwei"
+      "evidence": "owner anderssonm.testnet, auction 0x4994b9537d50756c5858399bdd460ba70be878cc, mpc v1.signer-prod.testnet, 3 agents, max gas 3000000, max fee 50 gwei"
     },
     {
       "section": "NEAR vault",
@@ -94,6 +98,90 @@
       "evidence": "1 key(s), {\"FunctionCall\":{\"allowance\":null,\"method_names\":[\"request_sign\"],\"receiver_id\":\"ssvault-anderssonm.testnet\"}}"
     },
     {
+      "section": "NEAR vault",
+      "claim": "swarm.ssmarket-anderssonm.testnet: deployed code = repo wasm",
+      "ok": true,
+      "evidence": "code_hash bwL6ttS5cSgZ8U6W6wRFrcTxSVf9xKYVJu3wFtThaWW = sha256(near-vault/build/swarm_vault.wasm)"
+    },
+    {
+      "section": "NEAR vault",
+      "claim": "swarm.ssmarket-anderssonm.testnet: holds zero access keys",
+      "ok": true,
+      "evidence": "0 keys — no one can redeploy, upgrade or drain it"
+    },
+    {
+      "section": "NEAR vault",
+      "claim": "swarm.ssmarket-anderssonm.testnet: policy targets the auction and the NEAR MPC",
+      "ok": true,
+      "evidence": "owner ssmarket-anderssonm.testnet, auction 0x4994b9537d50756c5858399bdd460ba70be878cc, mpc v1.signer-prod.testnet, 4 agents, max gas 3000000, max fee 50 gwei, settles in wrap.testnet (NEP-141 ft_transfer)"
+    },
+    {
+      "section": "NEAR vault",
+      "claim": "atlas.swarm.ssmarket-anderssonm.testnet: keys can only call request_sign / settle on the vault",
+      "ok": true,
+      "evidence": "1 key(s), {\"FunctionCall\":{\"allowance\":null,\"method_names\":[\"request_sign\",\"settle\"],\"receiver_id\":\"swarm.ssmarket-anderssonm.testnet\"}}"
+    },
+    {
+      "section": "NEAR vault",
+      "claim": "nova.swarm.ssmarket-anderssonm.testnet: keys can only call request_sign / settle on the vault",
+      "ok": true,
+      "evidence": "1 key(s), {\"FunctionCall\":{\"allowance\":null,\"method_names\":[\"request_sign\",\"settle\"],\"receiver_id\":\"swarm.ssmarket-anderssonm.testnet\"}}"
+    },
+    {
+      "section": "NEAR vault",
+      "claim": "quill.swarm.ssmarket-anderssonm.testnet: keys can only call request_sign / settle on the vault",
+      "ok": true,
+      "evidence": "1 key(s), {\"FunctionCall\":{\"allowance\":null,\"method_names\":[\"request_sign\",\"settle\"],\"receiver_id\":\"swarm.ssmarket-anderssonm.testnet\"}}"
+    },
+    {
+      "section": "NEAR vault",
+      "claim": "orion.swarm.ssmarket-anderssonm.testnet: keys can only call request_sign / settle on the vault",
+      "ok": true,
+      "evidence": "1 key(s), {\"FunctionCall\":{\"allowance\":null,\"method_names\":[\"request_sign\",\"settle\"],\"receiver_id\":\"swarm.ssmarket-anderssonm.testnet\"}}"
+    },
+    {
+      "section": "NEAR vault",
+      "claim": "swarm.lab2.ssmarket-anderssonm.testnet: deployed code = repo wasm",
+      "ok": true,
+      "evidence": "code_hash bwL6ttS5cSgZ8U6W6wRFrcTxSVf9xKYVJu3wFtThaWW = sha256(near-vault/build/swarm_vault.wasm)"
+    },
+    {
+      "section": "NEAR vault",
+      "claim": "swarm.lab2.ssmarket-anderssonm.testnet: holds zero access keys",
+      "ok": true,
+      "evidence": "0 keys — no one can redeploy, upgrade or drain it"
+    },
+    {
+      "section": "NEAR vault",
+      "claim": "swarm.lab2.ssmarket-anderssonm.testnet: policy targets the auction and the NEAR MPC",
+      "ok": true,
+      "evidence": "owner lab2.ssmarket-anderssonm.testnet, auction 0x4994b9537d50756c5858399bdd460ba70be878cc, mpc v1.signer-prod.testnet, 4 agents, max gas 3000000, max fee 50 gwei, settles in wrap.testnet (NEP-141 ft_transfer)"
+    },
+    {
+      "section": "NEAR vault",
+      "claim": "lyra.swarm.lab2.ssmarket-anderssonm.testnet: keys can only call request_sign / settle on the vault",
+      "ok": true,
+      "evidence": "1 key(s), {\"FunctionCall\":{\"allowance\":null,\"method_names\":[\"request_sign\",\"settle\"],\"receiver_id\":\"swarm.lab2.ssmarket-anderssonm.testnet\"}}"
+    },
+    {
+      "section": "NEAR vault",
+      "claim": "kai.swarm.lab2.ssmarket-anderssonm.testnet: keys can only call request_sign / settle on the vault",
+      "ok": true,
+      "evidence": "1 key(s), {\"FunctionCall\":{\"allowance\":null,\"method_names\":[\"request_sign\",\"settle\"],\"receiver_id\":\"swarm.lab2.ssmarket-anderssonm.testnet\"}}"
+    },
+    {
+      "section": "NEAR vault",
+      "claim": "vega.swarm.lab2.ssmarket-anderssonm.testnet: keys can only call request_sign / settle on the vault",
+      "ok": true,
+      "evidence": "1 key(s), {\"FunctionCall\":{\"allowance\":null,\"method_names\":[\"request_sign\",\"settle\"],\"receiver_id\":\"swarm.lab2.ssmarket-anderssonm.testnet\"}}"
+    },
+    {
+      "section": "NEAR vault",
+      "claim": "juno.swarm.lab2.ssmarket-anderssonm.testnet: keys can only call request_sign / settle on the vault",
+      "ok": true,
+      "evidence": "1 key(s), {\"FunctionCall\":{\"allowance\":null,\"method_names\":[\"request_sign\",\"settle\"],\"receiver_id\":\"swarm.lab2.ssmarket-anderssonm.testnet\"}}"
+    },
+    {
       "section": "Sepolia auction",
       "claim": "deployed bytecode = contract compiled from this repo",
       "ok": true,
@@ -103,13 +191,91 @@
       "section": "Sepolia auction",
       "claim": "every revealed winner entered the auction",
       "ok": true,
-      "evidence": "20 auctions, 17 revealed (0 below reserve, no sale), every winner was a bidder or a submitted pool and paid ≥ reserve"
+      "evidence": "22 auctions, 18 revealed (0 below reserve, no sale), every winner was a bidder or a submitted pool and paid ≥ reserve"
+    },
+    {
+      "section": "Round · auction #21",
+      "claim": "dashboard result = on-chain result",
+      "ok": true,
+      "evidence": "\"8x H200 · 1 hour\": winner pool #1 (atlas + quill + orion + vega) → 0x9d7D40f7…D502ec, price 293 (dashboard 293), 5 sealed entries"
+    },
+    {
+      "section": "Round · auction #21",
+      "claim": "pool #1 members are the named agents",
+      "ok": true,
+      "evidence": "atlas + quill + orion + vega = 0x40759dC0…804257, 0xD44b6800…4a1E55, 0x0E8EEfEB…54E02b, 0x91c81Bec…9Cbf79"
+    },
+    {
+      "section": "Round · auction #21",
+      "claim": "nova \"bid\" was signed by the NEAR MPC through its vault",
+      "ok": true,
+      "evidence": "NEAR 8tn1A6PRbi…QGA8up → MPC sig → Sepolia 0x23b9e4bb…d1bba8, signer 0xDFF3B8EF…Fe4E45 (derived sealedswarm-agent-2 = 0xDFF3B8EF…Fe4E45), status 0x1"
+    },
+    {
+      "section": "Round · auction #21",
+      "claim": "lyra \"bid\" was signed by the NEAR MPC through its vault",
+      "ok": true,
+      "evidence": "NEAR 5TxurFYCBC…cFG3QN → MPC sig → Sepolia 0xd79431ac…656f57, signer 0xf38114bf…6DF919 (derived sealedswarm-agent-1 = 0xf38114bf…6DF919), status 0x1"
+    },
+    {
+      "section": "Round · auction #21",
+      "claim": "kai \"bid\" was signed by the NEAR MPC through its vault",
+      "ok": true,
+      "evidence": "NEAR 5etm6p85Rc…GHEwYu → MPC sig → Sepolia 0x2fbd9e9c…f8d9b8, signer 0x5efcB3BC…9230DC (derived sealedswarm-agent-2 = 0x5efcB3BC…9230DC), status 0x1"
+    },
+    {
+      "section": "Round · auction #21",
+      "claim": "juno \"bid\" was signed by the NEAR MPC through its vault",
+      "ok": true,
+      "evidence": "NEAR ChtKSpfMGe…Phx7Mq → MPC sig → Sepolia 0x38485fc5…3f2efc, signer 0x7472EC00…eF780A (derived sealedswarm-agent-4 = 0x7472EC00…eF780A), status 0x1"
+    },
+    {
+      "section": "Round · auction #21",
+      "claim": "atlas \"opened pool\" was signed by the NEAR MPC through its vault",
+      "ok": true,
+      "evidence": "NEAR AyCr9RXro2…8UeizN → MPC sig → Sepolia 0x3324349b…e60900, signer 0x40759dC0…804257 (derived sealedswarm-agent-1 = 0x40759dC0…804257), status 0x1"
+    },
+    {
+      "section": "Round · auction #21",
+      "claim": "quill \"joined pool\" was signed by the NEAR MPC through its vault",
+      "ok": true,
+      "evidence": "NEAR 4Fq6MGL1vs…MWhtw1 → MPC sig → Sepolia 0x090243d4…55e9ea, signer 0xD44b6800…4a1E55 (derived sealedswarm-agent-3 = 0xD44b6800…4a1E55), status 0x1"
+    },
+    {
+      "section": "Round · auction #21",
+      "claim": "orion \"joined pool\" was signed by the NEAR MPC through its vault",
+      "ok": true,
+      "evidence": "NEAR 6XAHEUiH8Q…zUxoAo → MPC sig → Sepolia 0x7eb277d2…bca861, signer 0x0E8EEfEB…54E02b (derived sealedswarm-agent-4 = 0x0E8EEfEB…54E02b), status 0x1"
+    },
+    {
+      "section": "Round · auction #21",
+      "claim": "vega \"joined pool\" was signed by the NEAR MPC through its vault",
+      "ok": true,
+      "evidence": "NEAR BPfSVMn3HK…1UEq5w → MPC sig → Sepolia 0x452d13c7…9ee277, signer 0x91c81Bec…9Cbf79 (derived sealedswarm-agent-3 = 0x91c81Bec…9Cbf79), status 0x1"
+    },
+    {
+      "section": "Round · auction #21",
+      "claim": "pool #1 submitted by atlas was signed by the NEAR MPC through its vault",
+      "ok": true,
+      "evidence": "NEAR D1TGUbpfwx…sNsiPP → MPC sig → Sepolia 0x33ec6885…6898eb, signer 0x40759dC0…804257 (derived sealedswarm-agent-1 = 0x40759dC0…804257), status 0x1"
+    },
+    {
+      "section": "Round · auction #21",
+      "claim": "hijack attempt refused by the vault on NEAR",
+      "ok": true,
+      "evidence": "call close() to end the auction early (signed tx to 0x4994b953…e878cc, value 0, fee cap 7.1e-8 gwei) → NEAR 8Xzsw9i4RX…3jZKet: Smart contract panicked: only placeBid, joinPool and submitPool are allowed"
+    },
+    {
+      "section": "Round · auction #21",
+      "claim": "winner paid the seller in wNEAR on NEAR, through its vault",
+      "ok": true,
+      "evidence": "atlas 0.0088 + quill 0.0068 + orion 0.0075 + vega 0.0062 wNEAR = price 293 units → gpus.ssmarket-anderssonm.testnet (transfers logged by the token contract in 4 NEAR txs)"
     },
     {
       "section": "Round · auction #20",
       "claim": "dashboard result = on-chain result",
       "ok": true,
-      "evidence": "\"8x L40S · 1 hour\": winner pool #1 (quill + orion) → 0xCb63CAf3…e4d5A0, price 105 (dashboard 105), 3 sealed bids"
+      "evidence": "\"8x L40S · 1 hour\": winner pool #1 (quill + orion) → 0xCb63CAf3…e4d5A0, price 105 (dashboard 105), 3 sealed entries"
     },
     {
       "section": "Round · auction #20",
@@ -119,45 +285,45 @@
     },
     {
       "section": "Round · auction #20",
-      "claim": "atlas \"bid\" was signed by the NEAR MPC through the vault",
+      "claim": "atlas \"bid\" was signed by the NEAR MPC through its vault",
       "ok": true,
       "evidence": "NEAR 659iJqCsLj…799bEo → MPC sig → Sepolia 0xb928b2de…384e82, signer 0xADE18252…932484 (derived sealedswarm-agent-1 = 0xADE18252…932484), status 0x1"
     },
     {
       "section": "Round · auction #20",
-      "claim": "nova \"bid\" was signed by the NEAR MPC through the vault",
+      "claim": "nova \"bid\" was signed by the NEAR MPC through its vault",
       "ok": true,
       "evidence": "NEAR FNH63nQbFB…uCHxzK → MPC sig → Sepolia 0x306bed7a…e47540, signer 0x7F2D483F…44d70d (derived sealedswarm-agent-2 = 0x7F2D483F…44d70d), status 0x1"
     },
     {
       "section": "Round · auction #20",
-      "claim": "quill \"opened pool\" was signed by the NEAR MPC through the vault",
+      "claim": "quill \"opened pool\" was signed by the NEAR MPC through its vault",
       "ok": true,
       "evidence": "NEAR GLtZsTcHPt…s84fxh → MPC sig → Sepolia 0xfa0356d4…ddcc54, signer 0x3C8587B8…4231af (derived sealedswarm-agent-3 = 0x3C8587B8…4231af), status 0x1"
     },
     {
       "section": "Round · auction #20",
-      "claim": "orion \"joined pool\" was signed by the NEAR MPC through the vault",
+      "claim": "orion \"joined pool\" was signed by the NEAR MPC through its vault",
       "ok": true,
       "evidence": "NEAR 7rJuiUqwwK…4xvMTJ → MPC sig → Sepolia 0xc9b25feb…857b49, signer 0x1FbDeD89…7256A2 (derived sealedswarm-agent-4 = 0x1FbDeD89…7256A2), status 0x1"
     },
     {
       "section": "Round · auction #20",
-      "claim": "pool #1 submitted by quill was signed by the NEAR MPC through the vault",
+      "claim": "pool #1 submitted by quill was signed by the NEAR MPC through its vault",
       "ok": true,
       "evidence": "NEAR 3g9VTkg3sT…aBcAjH → MPC sig → Sepolia 0x1677a670…a87403, signer 0x3C8587B8…4231af (derived sealedswarm-agent-3 = 0x3C8587B8…4231af), status 0x1"
     },
     {
       "section": "Round · auction #20",
-      "claim": "hijack attempt was refused by the vault on NEAR",
+      "claim": "hijack attempt refused by the vault on NEAR",
       "ok": true,
-      "evidence": "send 0.001 ETH to 0x…dEaD (to 0x00000000…00dead) → NEAR Hsoyry5QLS…p8wZBa: Smart contract panicked: target is not the approved auction contract"
+      "evidence": "send 0.001 ETH to 0x…dEaD (signed tx to 0x00000000…00dead, value 1000000000000000, fee cap 8e-8 gwei) → NEAR Hsoyry5QLS…p8wZBa: Smart contract panicked: target is not the approved auction contract"
     },
     {
       "section": "Round · auction #19",
       "claim": "dashboard result = on-chain result",
       "ok": true,
-      "evidence": "\"4x A100 · 2 hours\": winner pool #1 (quill + orion) → 0x5A5308C4…5E26Bd, price 133 (dashboard 133), 3 sealed bids"
+      "evidence": "\"4x A100 · 2 hours\": winner pool #1 (quill + orion) → 0x5A5308C4…5E26Bd, price 133 (dashboard 133), 3 sealed entries"
     },
     {
       "section": "Round · auction #19",
@@ -167,45 +333,45 @@
     },
     {
       "section": "Round · auction #19",
-      "claim": "atlas \"bid\" was signed by the NEAR MPC through the vault",
+      "claim": "atlas \"bid\" was signed by the NEAR MPC through its vault",
       "ok": true,
       "evidence": "NEAR 5jvSxFcAG5…pCMdCU → MPC sig → Sepolia 0x852e48bc…7db557, signer 0xADE18252…932484 (derived sealedswarm-agent-1 = 0xADE18252…932484), status 0x1"
     },
     {
       "section": "Round · auction #19",
-      "claim": "nova \"bid\" was signed by the NEAR MPC through the vault",
+      "claim": "nova \"bid\" was signed by the NEAR MPC through its vault",
       "ok": true,
       "evidence": "NEAR HYkyWLYb5r…fCG74D → MPC sig → Sepolia 0xf92b444d…b12d1d, signer 0x7F2D483F…44d70d (derived sealedswarm-agent-2 = 0x7F2D483F…44d70d), status 0x1"
     },
     {
       "section": "Round · auction #19",
-      "claim": "quill \"opened pool\" was signed by the NEAR MPC through the vault",
+      "claim": "quill \"opened pool\" was signed by the NEAR MPC through its vault",
       "ok": true,
       "evidence": "NEAR RtfngPEFEE…fkj6uN → MPC sig → Sepolia 0xd0ba4928…4c1bac, signer 0x3C8587B8…4231af (derived sealedswarm-agent-3 = 0x3C8587B8…4231af), status 0x1"
     },
     {
       "section": "Round · auction #19",
-      "claim": "orion \"joined pool\" was signed by the NEAR MPC through the vault",
+      "claim": "orion \"joined pool\" was signed by the NEAR MPC through its vault",
       "ok": true,
       "evidence": "NEAR GnZNX6XzoL…YJ8yDN → MPC sig → Sepolia 0xbd9c7562…1ddd00, signer 0x1FbDeD89…7256A2 (derived sealedswarm-agent-4 = 0x1FbDeD89…7256A2), status 0x1"
     },
     {
       "section": "Round · auction #19",
-      "claim": "pool #1 submitted by quill was signed by the NEAR MPC through the vault",
+      "claim": "pool #1 submitted by quill was signed by the NEAR MPC through its vault",
       "ok": true,
       "evidence": "NEAR 5fSoyEewBz…vSPAwj → MPC sig → Sepolia 0x23a653dc…b83100, signer 0x3C8587B8…4231af (derived sealedswarm-agent-3 = 0x3C8587B8…4231af), status 0x1"
     },
     {
       "section": "Round · auction #19",
-      "claim": "hijack attempt was refused by the vault on NEAR",
+      "claim": "hijack attempt refused by the vault on NEAR",
       "ok": true,
-      "evidence": "send 0.001 ETH to 0x…dEaD (to 0x00000000…00dead) → NEAR 9YtqafkjPp…jobiqv: Smart contract panicked: target is not the approved auction contract"
+      "evidence": "send 0.001 ETH to 0x…dEaD (signed tx to 0x00000000…00dead, value 1000000000000000, fee cap 7.2e-8 gwei) → NEAR 9YtqafkjPp…jobiqv: Smart contract panicked: target is not the approved auction contract"
     },
     {
       "section": "Round · auction #18",
       "claim": "dashboard result = on-chain result",
       "ok": true,
-      "evidence": "\"8x H100 · 1 hour\": winner pool #1 (quill + orion) → 0x1Db93f7B…c5e75d, price 209 (dashboard 209), 3 sealed bids"
+      "evidence": "\"8x H100 · 1 hour\": winner pool #1 (quill + orion) → 0x1Db93f7B…c5e75d, price 209 (dashboard 209), 3 sealed entries"
     },
     {
       "section": "Round · auction #18",
@@ -215,45 +381,45 @@
     },
     {
       "section": "Round · auction #18",
-      "claim": "atlas \"bid\" was signed by the NEAR MPC through the vault",
+      "claim": "atlas \"bid\" was signed by the NEAR MPC through its vault",
       "ok": true,
       "evidence": "NEAR 2YHCdEgvnf…qanniE → MPC sig → Sepolia 0x2866ddad…7e5b5c, signer 0xADE18252…932484 (derived sealedswarm-agent-1 = 0xADE18252…932484), status 0x1"
     },
     {
       "section": "Round · auction #18",
-      "claim": "nova \"bid\" was signed by the NEAR MPC through the vault",
+      "claim": "nova \"bid\" was signed by the NEAR MPC through its vault",
       "ok": true,
       "evidence": "NEAR 8TUSnS4vgP…cZ9oCh → MPC sig → Sepolia 0x32962694…2b95b3, signer 0x7F2D483F…44d70d (derived sealedswarm-agent-2 = 0x7F2D483F…44d70d), status 0x1"
     },
     {
       "section": "Round · auction #18",
-      "claim": "quill \"opened pool\" was signed by the NEAR MPC through the vault",
+      "claim": "quill \"opened pool\" was signed by the NEAR MPC through its vault",
       "ok": true,
       "evidence": "NEAR BUrPDK1L9U…9eaMD4 → MPC sig → Sepolia 0x5d0ad46a…1b5289, signer 0x3C8587B8…4231af (derived sealedswarm-agent-3 = 0x3C8587B8…4231af), status 0x1"
     },
     {
       "section": "Round · auction #18",
-      "claim": "orion \"joined pool\" was signed by the NEAR MPC through the vault",
+      "claim": "orion \"joined pool\" was signed by the NEAR MPC through its vault",
       "ok": true,
       "evidence": "NEAR H6ik5KhX4m…QQfcF5 → MPC sig → Sepolia 0xa053cdef…b0f28b, signer 0x1FbDeD89…7256A2 (derived sealedswarm-agent-4 = 0x1FbDeD89…7256A2), status 0x1"
     },
     {
       "section": "Round · auction #18",
-      "claim": "pool #1 submitted by quill was signed by the NEAR MPC through the vault",
+      "claim": "pool #1 submitted by quill was signed by the NEAR MPC through its vault",
       "ok": true,
       "evidence": "NEAR FY348ESGb1…JEENdR → MPC sig → Sepolia 0x1c5de603…b743ca, signer 0x3C8587B8…4231af (derived sealedswarm-agent-3 = 0x3C8587B8…4231af), status 0x1"
     },
     {
       "section": "Round · auction #18",
-      "claim": "hijack attempt was refused by the vault on NEAR",
+      "claim": "hijack attempt refused by the vault on NEAR",
       "ok": true,
-      "evidence": "send 0.001 ETH to 0x…dEaD (to 0x00000000…00dead) → NEAR Cyz4msKJfa…7hbo3G: Smart contract panicked: target is not the approved auction contract"
+      "evidence": "send 0.001 ETH to 0x…dEaD (signed tx to 0x00000000…00dead, value 1000000000000000, fee cap 7e-8 gwei) → NEAR Cyz4msKJfa…7hbo3G: Smart contract panicked: target is not the approved auction contract"
     },
     {
       "section": "Round · auction #17",
       "claim": "dashboard result = on-chain result",
       "ok": true,
-      "evidence": "\"16x RTX 6000 · 1 hour\": winner nova.vault.ssmarket-anderssonm.testnet → 0x7F2D483F…44d70d, price 76 (dashboard 76), 3 sealed bids"
+      "evidence": "\"16x RTX 6000 · 1 hour\": winner nova.vault.ssmarket-anderssonm.testnet → 0x7F2D483F…44d70d, price 76 (dashboard 76), 3 sealed entries"
     },
     {
       "section": "Round · auction #17",
@@ -263,45 +429,45 @@
     },
     {
       "section": "Round · auction #17",
-      "claim": "atlas \"bid\" was signed by the NEAR MPC through the vault",
+      "claim": "atlas \"bid\" was signed by the NEAR MPC through its vault",
       "ok": true,
       "evidence": "NEAR EEHQ1t7YAu…AxgJmE → MPC sig → Sepolia 0x58666c01…b8508d, signer 0xADE18252…932484 (derived sealedswarm-agent-1 = 0xADE18252…932484), status 0x1"
     },
     {
       "section": "Round · auction #17",
-      "claim": "nova \"bid\" was signed by the NEAR MPC through the vault",
+      "claim": "nova \"bid\" was signed by the NEAR MPC through its vault",
       "ok": true,
       "evidence": "NEAR 5nTCHWgywK…GTyP6w → MPC sig → Sepolia 0x8054ebd9…0bd22f, signer 0x7F2D483F…44d70d (derived sealedswarm-agent-2 = 0x7F2D483F…44d70d), status 0x1"
     },
     {
       "section": "Round · auction #17",
-      "claim": "quill \"opened pool\" was signed by the NEAR MPC through the vault",
+      "claim": "quill \"opened pool\" was signed by the NEAR MPC through its vault",
       "ok": true,
       "evidence": "NEAR E3YoWZPcf6…t4jxag → MPC sig → Sepolia 0x3534f596…20ff86, signer 0x3C8587B8…4231af (derived sealedswarm-agent-3 = 0x3C8587B8…4231af), status 0x1"
     },
     {
       "section": "Round · auction #17",
-      "claim": "orion \"joined pool\" was signed by the NEAR MPC through the vault",
+      "claim": "orion \"joined pool\" was signed by the NEAR MPC through its vault",
       "ok": true,
       "evidence": "NEAR 2Yre2xi3ha…bpZJYP → MPC sig → Sepolia 0xcce8426e…cd1bc9, signer 0x1FbDeD89…7256A2 (derived sealedswarm-agent-4 = 0x1FbDeD89…7256A2), status 0x1"
     },
     {
       "section": "Round · auction #17",
-      "claim": "pool #1 submitted by quill was signed by the NEAR MPC through the vault",
+      "claim": "pool #1 submitted by quill was signed by the NEAR MPC through its vault",
       "ok": true,
       "evidence": "NEAR 2YAqFxUfBg…zYtDm9 → MPC sig → Sepolia 0xdbf92f4e…6b9b79, signer 0x3C8587B8…4231af (derived sealedswarm-agent-3 = 0x3C8587B8…4231af), status 0x1"
     },
     {
       "section": "Round · auction #17",
-      "claim": "hijack attempt was refused by the vault on NEAR",
+      "claim": "hijack attempt refused by the vault on NEAR",
       "ok": true,
-      "evidence": "send 0.001 ETH to 0x…dEaD (to 0x00000000…00dead) → NEAR 99MhCtxyWN…nG5Jt5: Smart contract panicked: target is not the approved auction contract"
+      "evidence": "send 0.001 ETH to 0x…dEaD (signed tx to 0x00000000…00dead, value 1000000000000000, fee cap 7.1e-8 gwei) → NEAR 99MhCtxyWN…nG5Jt5: Smart contract panicked: target is not the approved auction contract"
     },
     {
       "section": "Round · auction #16",
       "claim": "dashboard result = on-chain result",
       "ok": true,
-      "evidence": "\"8x H200 · 1 hour\": winner pool #1 (atlas + quill + orion) → 0x0B28C969…0569dc, price 286 (dashboard 286), 2 sealed bids"
+      "evidence": "\"8x H200 · 1 hour\": winner pool #1 (atlas + quill + orion) → 0x0B28C969…0569dc, price 286 (dashboard 286), 2 sealed entries"
     },
     {
       "section": "Round · auction #16",
@@ -311,45 +477,45 @@
     },
     {
       "section": "Round · auction #16",
-      "claim": "nova \"bid\" was signed by the NEAR MPC through the vault",
+      "claim": "nova \"bid\" was signed by the NEAR MPC through its vault",
       "ok": true,
       "evidence": "NEAR 2CGmimnBmt…s3UdTv → MPC sig → Sepolia 0x37375714…317400, signer 0x7F2D483F…44d70d (derived sealedswarm-agent-2 = 0x7F2D483F…44d70d), status 0x1"
     },
     {
       "section": "Round · auction #16",
-      "claim": "atlas \"opened pool\" was signed by the NEAR MPC through the vault",
+      "claim": "atlas \"opened pool\" was signed by the NEAR MPC through its vault",
       "ok": true,
       "evidence": "NEAR E3PnnHaAP2…mKCx43 → MPC sig → Sepolia 0xb992bef0…625583, signer 0xADE18252…932484 (derived sealedswarm-agent-1 = 0xADE18252…932484), status 0x1"
     },
     {
       "section": "Round · auction #16",
-      "claim": "quill \"joined pool\" was signed by the NEAR MPC through the vault",
+      "claim": "quill \"joined pool\" was signed by the NEAR MPC through its vault",
       "ok": true,
       "evidence": "NEAR 5VCofDPjSd…2pQeYR → MPC sig → Sepolia 0xc1d5974f…ac0e76, signer 0x3C8587B8…4231af (derived sealedswarm-agent-3 = 0x3C8587B8…4231af), status 0x1"
     },
     {
       "section": "Round · auction #16",
-      "claim": "orion \"joined pool\" was signed by the NEAR MPC through the vault",
+      "claim": "orion \"joined pool\" was signed by the NEAR MPC through its vault",
       "ok": true,
       "evidence": "NEAR ACVSf5WfL3…Cv12yF → MPC sig → Sepolia 0x33e823ee…3283fa, signer 0x1FbDeD89…7256A2 (derived sealedswarm-agent-4 = 0x1FbDeD89…7256A2), status 0x1"
     },
     {
       "section": "Round · auction #16",
-      "claim": "pool #1 submitted by atlas was signed by the NEAR MPC through the vault",
+      "claim": "pool #1 submitted by atlas was signed by the NEAR MPC through its vault",
       "ok": true,
       "evidence": "NEAR FapQSmHguS…d3vN9a → MPC sig → Sepolia 0xf19e428c…652649, signer 0xADE18252…932484 (derived sealedswarm-agent-1 = 0xADE18252…932484), status 0x1"
     },
     {
       "section": "Round · auction #16",
-      "claim": "hijack attempt was refused by the vault on NEAR",
+      "claim": "hijack attempt refused by the vault on NEAR",
       "ok": true,
-      "evidence": "send 0.001 ETH to 0x…dEaD (to 0x00000000…00dead) → NEAR FRiyFvBkDQ…BgLtgG: Smart contract panicked: target is not the approved auction contract"
+      "evidence": "send 0.001 ETH to 0x…dEaD (signed tx to 0x00000000…00dead, value 1000000000000000, fee cap 7.5e-8 gwei) → NEAR FRiyFvBkDQ…BgLtgG: Smart contract panicked: target is not the approved auction contract"
     },
     {
       "section": "Round · auction #15",
       "claim": "dashboard result = on-chain result",
       "ok": true,
-      "evidence": "\"8x L40S · 1 hour\": winner pool #1 (quill + orion) → 0x7D0F0998…530481, price 105 (dashboard 105), 3 sealed bids"
+      "evidence": "\"8x L40S · 1 hour\": winner pool #1 (quill + orion) → 0x7D0F0998…530481, price 105 (dashboard 105), 3 sealed entries"
     },
     {
       "section": "Round · auction #15",
@@ -359,45 +525,45 @@
     },
     {
       "section": "Round · auction #15",
-      "claim": "atlas \"bid\" was signed by the NEAR MPC through the vault",
+      "claim": "atlas \"bid\" was signed by the NEAR MPC through its vault",
       "ok": true,
       "evidence": "NEAR D4M1f7jrsh…1qdDSe → MPC sig → Sepolia 0x30df6e55…7b1ef2, signer 0xADE18252…932484 (derived sealedswarm-agent-1 = 0xADE18252…932484), status 0x1"
     },
     {
       "section": "Round · auction #15",
-      "claim": "nova \"bid\" was signed by the NEAR MPC through the vault",
+      "claim": "nova \"bid\" was signed by the NEAR MPC through its vault",
       "ok": true,
       "evidence": "NEAR 2nENrWoC1R…Mkxow5 → MPC sig → Sepolia 0x6d054dbb…c60137, signer 0x7F2D483F…44d70d (derived sealedswarm-agent-2 = 0x7F2D483F…44d70d), status 0x1"
     },
     {
       "section": "Round · auction #15",
-      "claim": "quill \"opened pool\" was signed by the NEAR MPC through the vault",
+      "claim": "quill \"opened pool\" was signed by the NEAR MPC through its vault",
       "ok": true,
       "evidence": "NEAR DeAsG9r4JR…S8KZtd → MPC sig → Sepolia 0x8dc61b28…de5826, signer 0x3C8587B8…4231af (derived sealedswarm-agent-3 = 0x3C8587B8…4231af), status 0x1"
     },
     {
       "section": "Round · auction #15",
-      "claim": "orion \"joined pool\" was signed by the NEAR MPC through the vault",
+      "claim": "orion \"joined pool\" was signed by the NEAR MPC through its vault",
       "ok": true,
       "evidence": "NEAR 4Xgap5L6DE…eHRrhb → MPC sig → Sepolia 0x0d1add58…6b0a13, signer 0x1FbDeD89…7256A2 (derived sealedswarm-agent-4 = 0x1FbDeD89…7256A2), status 0x1"
     },
     {
       "section": "Round · auction #15",
-      "claim": "pool #1 submitted by quill was signed by the NEAR MPC through the vault",
+      "claim": "pool #1 submitted by quill was signed by the NEAR MPC through its vault",
       "ok": true,
       "evidence": "NEAR BuHLAGKDjf…dq8dam → MPC sig → Sepolia 0x4f0737bd…a058c9, signer 0x3C8587B8…4231af (derived sealedswarm-agent-3 = 0x3C8587B8…4231af), status 0x1"
     },
     {
       "section": "Round · auction #15",
-      "claim": "hijack attempt was refused by the vault on NEAR",
+      "claim": "hijack attempt refused by the vault on NEAR",
       "ok": true,
-      "evidence": "send 0.001 ETH to 0x…dEaD (to 0x00000000…00dead) → NEAR 9QgA3btHSE…MQnraf: Smart contract panicked: target is not the approved auction contract"
+      "evidence": "send 0.001 ETH to 0x…dEaD (signed tx to 0x00000000…00dead, value 1000000000000000, fee cap 6.8e-8 gwei) → NEAR 9QgA3btHSE…MQnraf: Smart contract panicked: target is not the approved auction contract"
     },
     {
       "section": "Round · auction #14",
       "claim": "dashboard result = on-chain result",
       "ok": true,
-      "evidence": "\"4x A100 · 2 hours\": winner pool #1 (quill + orion) → 0x1C394619…3E1A75, price 133 (dashboard 133), 3 sealed bids"
+      "evidence": "\"4x A100 · 2 hours\": winner pool #1 (quill + orion) → 0x1C394619…3E1A75, price 133 (dashboard 133), 3 sealed entries"
     },
     {
       "section": "Round · auction #14",
@@ -407,45 +573,45 @@
     },
     {
       "section": "Round · auction #14",
-      "claim": "atlas \"bid\" was signed by the NEAR MPC through the vault",
+      "claim": "atlas \"bid\" was signed by the NEAR MPC through its vault",
       "ok": true,
       "evidence": "NEAR 3rKtfh6nMd…k7RKZq → MPC sig → Sepolia 0xc0777605…579a20, signer 0xADE18252…932484 (derived sealedswarm-agent-1 = 0xADE18252…932484), status 0x1"
     },
     {
       "section": "Round · auction #14",
-      "claim": "nova \"bid\" was signed by the NEAR MPC through the vault",
+      "claim": "nova \"bid\" was signed by the NEAR MPC through its vault",
       "ok": true,
       "evidence": "NEAR 5UTRFDWBBL…sxTqwN → MPC sig → Sepolia 0xa3b892ce…793e52, signer 0x7F2D483F…44d70d (derived sealedswarm-agent-2 = 0x7F2D483F…44d70d), status 0x1"
     },
     {
       "section": "Round · auction #14",
-      "claim": "quill \"opened pool\" was signed by the NEAR MPC through the vault",
+      "claim": "quill \"opened pool\" was signed by the NEAR MPC through its vault",
       "ok": true,
       "evidence": "NEAR t81LDjCBbC…8FyihB → MPC sig → Sepolia 0xf43d12df…670630, signer 0x3C8587B8…4231af (derived sealedswarm-agent-3 = 0x3C8587B8…4231af), status 0x1"
     },
     {
       "section": "Round · auction #14",
-      "claim": "orion \"joined pool\" was signed by the NEAR MPC through the vault",
+      "claim": "orion \"joined pool\" was signed by the NEAR MPC through its vault",
       "ok": true,
       "evidence": "NEAR 6n6jQRbmCw…11Qo2y → MPC sig → Sepolia 0x9bdf423c…2cddd4, signer 0x1FbDeD89…7256A2 (derived sealedswarm-agent-4 = 0x1FbDeD89…7256A2), status 0x1"
     },
     {
       "section": "Round · auction #14",
-      "claim": "pool #1 submitted by quill was signed by the NEAR MPC through the vault",
+      "claim": "pool #1 submitted by quill was signed by the NEAR MPC through its vault",
       "ok": true,
       "evidence": "NEAR 8SxvFc9FR9…CRby2m → MPC sig → Sepolia 0xc8d105bd…1cee75, signer 0x3C8587B8…4231af (derived sealedswarm-agent-3 = 0x3C8587B8…4231af), status 0x1"
     },
     {
       "section": "Round · auction #14",
-      "claim": "hijack attempt was refused by the vault on NEAR",
+      "claim": "hijack attempt refused by the vault on NEAR",
       "ok": true,
-      "evidence": "send 0.001 ETH to 0x…dEaD (to 0x00000000…00dead) → NEAR CFPJPWiKEg…osH4oA: Smart contract panicked: target is not the approved auction contract"
+      "evidence": "send 0.001 ETH to 0x…dEaD (signed tx to 0x00000000…00dead, value 1000000000000000, fee cap 4.1e-8 gwei) → NEAR CFPJPWiKEg…osH4oA: Smart contract panicked: target is not the approved auction contract"
     },
     {
       "section": "Round · auction #13",
       "claim": "dashboard result = on-chain result",
       "ok": true,
-      "evidence": "\"8x H100 · 1 hour\": winner pool #1 (quill + orion) → 0xd9D975B8…776539, price 210 (dashboard 210), 3 sealed bids"
+      "evidence": "\"8x H100 · 1 hour\": winner pool #1 (quill + orion) → 0xd9D975B8…776539, price 210 (dashboard 210), 3 sealed entries"
     },
     {
       "section": "Round · auction #13",
@@ -455,45 +621,45 @@
     },
     {
       "section": "Round · auction #13",
-      "claim": "atlas \"bid\" was signed by the NEAR MPC through the vault",
+      "claim": "atlas \"bid\" was signed by the NEAR MPC through its vault",
       "ok": true,
       "evidence": "NEAR qcVMCxyij1…LqFG3b → MPC sig → Sepolia 0xfedfbc81…efdd88, signer 0xADE18252…932484 (derived sealedswarm-agent-1 = 0xADE18252…932484), status 0x1"
     },
     {
       "section": "Round · auction #13",
-      "claim": "nova \"bid\" was signed by the NEAR MPC through the vault",
+      "claim": "nova \"bid\" was signed by the NEAR MPC through its vault",
       "ok": true,
       "evidence": "NEAR DVufQ5beZt…RhHvFr → MPC sig → Sepolia 0xee0803a7…75416c, signer 0x7F2D483F…44d70d (derived sealedswarm-agent-2 = 0x7F2D483F…44d70d), status 0x1"
     },
     {
       "section": "Round · auction #13",
-      "claim": "quill \"opened pool\" was signed by the NEAR MPC through the vault",
+      "claim": "quill \"opened pool\" was signed by the NEAR MPC through its vault",
       "ok": true,
       "evidence": "NEAR HfciFD3emp…Q4uY8q → MPC sig → Sepolia 0xc696a20c…77c09f, signer 0x3C8587B8…4231af (derived sealedswarm-agent-3 = 0x3C8587B8…4231af), status 0x1"
     },
     {
       "section": "Round · auction #13",
-      "claim": "orion \"joined pool\" was signed by the NEAR MPC through the vault",
+      "claim": "orion \"joined pool\" was signed by the NEAR MPC through its vault",
       "ok": true,
       "evidence": "NEAR E6to6BtQE3…vvuCZ9 → MPC sig → Sepolia 0x46b3a85c…a667b1, signer 0x1FbDeD89…7256A2 (derived sealedswarm-agent-4 = 0x1FbDeD89…7256A2), status 0x1"
     },
     {
       "section": "Round · auction #13",
-      "claim": "pool #1 submitted by quill was signed by the NEAR MPC through the vault",
+      "claim": "pool #1 submitted by quill was signed by the NEAR MPC through its vault",
       "ok": true,
       "evidence": "NEAR FkK6R3XZYf…iivnDR → MPC sig → Sepolia 0xdda42b52…3f4cfe, signer 0x3C8587B8…4231af (derived sealedswarm-agent-3 = 0x3C8587B8…4231af), status 0x1"
     },
     {
       "section": "Round · auction #13",
-      "claim": "hijack attempt was refused by the vault on NEAR",
+      "claim": "hijack attempt refused by the vault on NEAR",
       "ok": true,
-      "evidence": "send 0.001 ETH to 0x…dEaD (to 0x00000000…00dead) → NEAR BDKizakpP2…X5vhsn: Smart contract panicked: target is not the approved auction contract"
+      "evidence": "send 0.001 ETH to 0x…dEaD (signed tx to 0x00000000…00dead, value 1000000000000000, fee cap 7.2e-8 gwei) → NEAR BDKizakpP2…X5vhsn: Smart contract panicked: target is not the approved auction contract"
     },
     {
       "section": "Round · auction #12",
       "claim": "dashboard result = on-chain result",
       "ok": true,
-      "evidence": "\"16x RTX 6000 · 1 hour\": winner nova.vault.ssmarket-anderssonm.testnet → 0x7F2D483F…44d70d, price 76 (dashboard 76), 3 sealed bids"
+      "evidence": "\"16x RTX 6000 · 1 hour\": winner nova.vault.ssmarket-anderssonm.testnet → 0x7F2D483F…44d70d, price 76 (dashboard 76), 3 sealed entries"
     },
     {
       "section": "Round · auction #12",
@@ -503,45 +669,45 @@
     },
     {
       "section": "Round · auction #12",
-      "claim": "atlas \"bid\" was signed by the NEAR MPC through the vault",
+      "claim": "atlas \"bid\" was signed by the NEAR MPC through its vault",
       "ok": true,
       "evidence": "NEAR BeWmL5ML6f…rLhEaE → MPC sig → Sepolia 0x679aa04f…b2d04b, signer 0xADE18252…932484 (derived sealedswarm-agent-1 = 0xADE18252…932484), status 0x1"
     },
     {
       "section": "Round · auction #12",
-      "claim": "nova \"bid\" was signed by the NEAR MPC through the vault",
+      "claim": "nova \"bid\" was signed by the NEAR MPC through its vault",
       "ok": true,
       "evidence": "NEAR 3ChEuKRTvb…43Y5dK → MPC sig → Sepolia 0xa65c4a0f…454786, signer 0x7F2D483F…44d70d (derived sealedswarm-agent-2 = 0x7F2D483F…44d70d), status 0x1"
     },
     {
       "section": "Round · auction #12",
-      "claim": "quill \"opened pool\" was signed by the NEAR MPC through the vault",
+      "claim": "quill \"opened pool\" was signed by the NEAR MPC through its vault",
       "ok": true,
       "evidence": "NEAR 8C74HmGhxT…Mi4QWW → MPC sig → Sepolia 0x369210d5…69dc8b, signer 0x3C8587B8…4231af (derived sealedswarm-agent-3 = 0x3C8587B8…4231af), status 0x1"
     },
     {
       "section": "Round · auction #12",
-      "claim": "orion \"joined pool\" was signed by the NEAR MPC through the vault",
+      "claim": "orion \"joined pool\" was signed by the NEAR MPC through its vault",
       "ok": true,
       "evidence": "NEAR 4x5ihKX9KY…Axcgbq → MPC sig → Sepolia 0xc3e77aa7…c050e8, signer 0x1FbDeD89…7256A2 (derived sealedswarm-agent-4 = 0x1FbDeD89…7256A2), status 0x1"
     },
     {
       "section": "Round · auction #12",
-      "claim": "pool #1 submitted by quill was signed by the NEAR MPC through the vault",
+      "claim": "pool #1 submitted by quill was signed by the NEAR MPC through its vault",
       "ok": true,
       "evidence": "NEAR E2kXUC6Jmy…HheArz → MPC sig → Sepolia 0x27e2a33e…dc4529, signer 0x3C8587B8…4231af (derived sealedswarm-agent-3 = 0x3C8587B8…4231af), status 0x1"
     },
     {
       "section": "Round · auction #12",
-      "claim": "hijack attempt was refused by the vault on NEAR",
+      "claim": "hijack attempt refused by the vault on NEAR",
       "ok": true,
-      "evidence": "send 0.001 ETH to 0x…dEaD (to 0x00000000…00dead) → NEAR 9SX5W5Q3LT…RRGehx: Smart contract panicked: target is not the approved auction contract"
+      "evidence": "send 0.001 ETH to 0x…dEaD (signed tx to 0x00000000…00dead, value 1000000000000000, fee cap 7e-8 gwei) → NEAR 9SX5W5Q3LT…RRGehx: Smart contract panicked: target is not the approved auction contract"
     },
     {
       "section": "Round · auction #11",
       "claim": "dashboard result = on-chain result",
       "ok": true,
-      "evidence": "\"8x H200 · 1 hour\": winner pool #1 (atlas + quill + orion) → 0xa036851a…34eE5A, price 285 (dashboard 285), 2 sealed bids"
+      "evidence": "\"8x H200 · 1 hour\": winner pool #1 (atlas + quill + orion) → 0xa036851a…34eE5A, price 285 (dashboard 285), 2 sealed entries"
     },
     {
       "section": "Round · auction #11",
@@ -551,45 +717,45 @@
     },
     {
       "section": "Round · auction #11",
-      "claim": "nova \"bid\" was signed by the NEAR MPC through the vault",
+      "claim": "nova \"bid\" was signed by the NEAR MPC through its vault",
       "ok": true,
       "evidence": "NEAR 8YVKtEsxuh…hEq4F3 → MPC sig → Sepolia 0x0703f47e…aafed6, signer 0x7F2D483F…44d70d (derived sealedswarm-agent-2 = 0x7F2D483F…44d70d), status 0x1"
     },
     {
       "section": "Round · auction #11",
-      "claim": "atlas \"opened pool\" was signed by the NEAR MPC through the vault",
+      "claim": "atlas \"opened pool\" was signed by the NEAR MPC through its vault",
       "ok": true,
       "evidence": "NEAR BJNYk4oSxt…7iUKS5 → MPC sig → Sepolia 0x7d28d6ba…063d06, signer 0xADE18252…932484 (derived sealedswarm-agent-1 = 0xADE18252…932484), status 0x1"
     },
     {
       "section": "Round · auction #11",
-      "claim": "quill \"joined pool\" was signed by the NEAR MPC through the vault",
+      "claim": "quill \"joined pool\" was signed by the NEAR MPC through its vault",
       "ok": true,
       "evidence": "NEAR H5kqugaQjs…yvD7TL → MPC sig → Sepolia 0xc5eaf7c2…a233a7, signer 0x3C8587B8…4231af (derived sealedswarm-agent-3 = 0x3C8587B8…4231af), status 0x1"
     },
     {
       "section": "Round · auction #11",
-      "claim": "orion \"joined pool\" was signed by the NEAR MPC through the vault",
+      "claim": "orion \"joined pool\" was signed by the NEAR MPC through its vault",
       "ok": true,
       "evidence": "NEAR 3qXc55Vqj8…iYQDeC → MPC sig → Sepolia 0xf3a4c342…a4964d, signer 0x1FbDeD89…7256A2 (derived sealedswarm-agent-4 = 0x1FbDeD89…7256A2), status 0x1"
     },
     {
       "section": "Round · auction #11",
-      "claim": "pool #1 submitted by atlas was signed by the NEAR MPC through the vault",
+      "claim": "pool #1 submitted by atlas was signed by the NEAR MPC through its vault",
       "ok": true,
       "evidence": "NEAR 5MnK9tberb…WwoUop → MPC sig → Sepolia 0x7684fb50…aba325, signer 0xADE18252…932484 (derived sealedswarm-agent-1 = 0xADE18252…932484), status 0x1"
     },
     {
       "section": "Round · auction #11",
-      "claim": "hijack attempt was refused by the vault on NEAR",
+      "claim": "hijack attempt refused by the vault on NEAR",
       "ok": true,
-      "evidence": "send 0.001 ETH to 0x…dEaD (to 0x00000000…00dead) → NEAR 9AV9bpP2pQ…oWwnPe: Smart contract panicked: target is not the approved auction contract"
+      "evidence": "send 0.001 ETH to 0x…dEaD (signed tx to 0x00000000…00dead, value 1000000000000000, fee cap 8e-8 gwei) → NEAR 9AV9bpP2pQ…oWwnPe: Smart contract panicked: target is not the approved auction contract"
     },
     {
       "section": "Round · auction #10",
       "claim": "dashboard result = on-chain result",
       "ok": true,
-      "evidence": "\"8x L40S · 1 hour\": winner pool #1 (quill + orion) → 0xE8BcDa1c…966E4B, price 105 (dashboard 105), 3 sealed bids"
+      "evidence": "\"8x L40S · 1 hour\": winner pool #1 (quill + orion) → 0xE8BcDa1c…966E4B, price 105 (dashboard 105), 3 sealed entries"
     },
     {
       "section": "Round · auction #10",
@@ -599,45 +765,45 @@
     },
     {
       "section": "Round · auction #10",
-      "claim": "atlas \"bid\" was signed by the NEAR MPC through the vault",
+      "claim": "atlas \"bid\" was signed by the NEAR MPC through its vault",
       "ok": true,
       "evidence": "NEAR 4cFHLXk5MY…PTjtSL → MPC sig → Sepolia 0x566709a2…9172fe, signer 0xADE18252…932484 (derived sealedswarm-agent-1 = 0xADE18252…932484), status 0x1"
     },
     {
       "section": "Round · auction #10",
-      "claim": "nova \"bid\" was signed by the NEAR MPC through the vault",
+      "claim": "nova \"bid\" was signed by the NEAR MPC through its vault",
       "ok": true,
       "evidence": "NEAR EddxRvrRE7…1ywwLx → MPC sig → Sepolia 0x379bd2eb…67a4b9, signer 0x7F2D483F…44d70d (derived sealedswarm-agent-2 = 0x7F2D483F…44d70d), status 0x1"
     },
     {
       "section": "Round · auction #10",
-      "claim": "quill \"opened pool\" was signed by the NEAR MPC through the vault",
+      "claim": "quill \"opened pool\" was signed by the NEAR MPC through its vault",
       "ok": true,
       "evidence": "NEAR 7aqtT8WAcs…QcyqBL → MPC sig → Sepolia 0x4037c9ee…eefe29, signer 0x3C8587B8…4231af (derived sealedswarm-agent-3 = 0x3C8587B8…4231af), status 0x1"
     },
     {
       "section": "Round · auction #10",
-      "claim": "orion \"joined pool\" was signed by the NEAR MPC through the vault",
+      "claim": "orion \"joined pool\" was signed by the NEAR MPC through its vault",
       "ok": true,
       "evidence": "NEAR 2wi4iZvhgy…RombyU → MPC sig → Sepolia 0x69085093…cc2928, signer 0x1FbDeD89…7256A2 (derived sealedswarm-agent-4 = 0x1FbDeD89…7256A2), status 0x1"
     },
     {
       "section": "Round · auction #10",
-      "claim": "pool #1 submitted by quill was signed by the NEAR MPC through the vault",
+      "claim": "pool #1 submitted by quill was signed by the NEAR MPC through its vault",
       "ok": true,
       "evidence": "NEAR BxME7gp3BP…AReeYU → MPC sig → Sepolia 0xfe30b9a2…0da54a, signer 0x3C8587B8…4231af (derived sealedswarm-agent-3 = 0x3C8587B8…4231af), status 0x1"
     },
     {
       "section": "Round · auction #10",
-      "claim": "hijack attempt was refused by the vault on NEAR",
+      "claim": "hijack attempt refused by the vault on NEAR",
       "ok": true,
-      "evidence": "send 0.001 ETH to 0x…dEaD (to 0x00000000…00dead) → NEAR 7jJYv5MyRx…e9LbY2: Smart contract panicked: target is not the approved auction contract"
+      "evidence": "send 0.001 ETH to 0x…dEaD (signed tx to 0x00000000…00dead, value 1000000000000000, fee cap 6.8e-8 gwei) → NEAR 7jJYv5MyRx…e9LbY2: Smart contract panicked: target is not the approved auction contract"
     },
     {
       "section": "Round · auction #9",
       "claim": "dashboard result = on-chain result",
       "ok": true,
-      "evidence": "\"4x A100 · 2 hours\": winner pool #1 (quill + orion) → 0x903cE9fF…44F796, price 133 (dashboard 133), 3 sealed bids"
+      "evidence": "\"4x A100 · 2 hours\": winner pool #1 (quill + orion) → 0x903cE9fF…44F796, price 133 (dashboard 133), 3 sealed entries"
     },
     {
       "section": "Round · auction #9",
@@ -647,45 +813,45 @@
     },
     {
       "section": "Round · auction #9",
-      "claim": "atlas \"bid\" was signed by the NEAR MPC through the vault",
+      "claim": "atlas \"bid\" was signed by the NEAR MPC through its vault",
       "ok": true,
       "evidence": "NEAR 7nhDR7uKKV…dGVr1j → MPC sig → Sepolia 0xd8d398e6…ed98ec, signer 0xADE18252…932484 (derived sealedswarm-agent-1 = 0xADE18252…932484), status 0x1"
     },
     {
       "section": "Round · auction #9",
-      "claim": "nova \"bid\" was signed by the NEAR MPC through the vault",
+      "claim": "nova \"bid\" was signed by the NEAR MPC through its vault",
       "ok": true,
       "evidence": "NEAR FLx3q7Zh6C…e4qfV6 → MPC sig → Sepolia 0xdba6878b…aae4d7, signer 0x7F2D483F…44d70d (derived sealedswarm-agent-2 = 0x7F2D483F…44d70d), status 0x1"
     },
     {
       "section": "Round · auction #9",
-      "claim": "quill \"opened pool\" was signed by the NEAR MPC through the vault",
+      "claim": "quill \"opened pool\" was signed by the NEAR MPC through its vault",
       "ok": true,
       "evidence": "NEAR 8qcVVR1gTD…DdfG7R → MPC sig → Sepolia 0xd1486066…3b209d, signer 0x3C8587B8…4231af (derived sealedswarm-agent-3 = 0x3C8587B8…4231af), status 0x1"
     },
     {
       "section": "Round · auction #9",
-      "claim": "orion \"joined pool\" was signed by the NEAR MPC through the vault",
+      "claim": "orion \"joined pool\" was signed by the NEAR MPC through its vault",
       "ok": true,
       "evidence": "NEAR 5LPoSzwSqG…3MWTen → MPC sig → Sepolia 0x3486553f…b6692d, signer 0x1FbDeD89…7256A2 (derived sealedswarm-agent-4 = 0x1FbDeD89…7256A2), status 0x1"
     },
     {
       "section": "Round · auction #9",
-      "claim": "pool #1 submitted by quill was signed by the NEAR MPC through the vault",
+      "claim": "pool #1 submitted by quill was signed by the NEAR MPC through its vault",
       "ok": true,
       "evidence": "NEAR 7zR7kfT8Vw…JzHfy9 → MPC sig → Sepolia 0x9613dc05…a3298f, signer 0x3C8587B8…4231af (derived sealedswarm-agent-3 = 0x3C8587B8…4231af), status 0x1"
     },
     {
       "section": "Round · auction #9",
-      "claim": "hijack attempt was refused by the vault on NEAR",
+      "claim": "hijack attempt refused by the vault on NEAR",
       "ok": true,
-      "evidence": "send 0.001 ETH to 0x…dEaD (to 0x00000000…00dead) → NEAR 43AnuDvTGz…xPCpPr: Smart contract panicked: target is not the approved auction contract"
+      "evidence": "send 0.001 ETH to 0x…dEaD (signed tx to 0x00000000…00dead, value 1000000000000000, fee cap 7.1e-8 gwei) → NEAR 43AnuDvTGz…xPCpPr: Smart contract panicked: target is not the approved auction contract"
     },
     {
       "section": "Round · auction #8",
       "claim": "dashboard result = on-chain result",
       "ok": true,
-      "evidence": "\"8x H100 · 1 hour\": winner pool #1 (quill + orion) → 0x08A29C00…Ec8260, price 209 (dashboard 209), 3 sealed bids"
+      "evidence": "\"8x H100 · 1 hour\": winner pool #1 (quill + orion) → 0x08A29C00…Ec8260, price 209 (dashboard 209), 3 sealed entries"
     },
     {
       "section": "Round · auction #8",
@@ -695,39 +861,39 @@
     },
     {
       "section": "Round · auction #8",
-      "claim": "atlas \"bid\" was signed by the NEAR MPC through the vault",
+      "claim": "atlas \"bid\" was signed by the NEAR MPC through its vault",
       "ok": true,
       "evidence": "NEAR AkFbpc8vVB…yPUiLV → MPC sig → Sepolia 0x20a87f6e…051a2d, signer 0xADE18252…932484 (derived sealedswarm-agent-1 = 0xADE18252…932484), status 0x1"
     },
     {
       "section": "Round · auction #8",
-      "claim": "nova \"bid\" was signed by the NEAR MPC through the vault",
+      "claim": "nova \"bid\" was signed by the NEAR MPC through its vault",
       "ok": true,
       "evidence": "NEAR 9V5XaMD9j8…5f2R4X → MPC sig → Sepolia 0x1c18c63f…ff9afe, signer 0x7F2D483F…44d70d (derived sealedswarm-agent-2 = 0x7F2D483F…44d70d), status 0x1"
     },
     {
       "section": "Round · auction #8",
-      "claim": "quill \"opened pool\" was signed by the NEAR MPC through the vault",
+      "claim": "quill \"opened pool\" was signed by the NEAR MPC through its vault",
       "ok": true,
       "evidence": "NEAR gQmXDcp25K…pYrJHr → MPC sig → Sepolia 0xe4e2c636…f5a8bd, signer 0x3C8587B8…4231af (derived sealedswarm-agent-3 = 0x3C8587B8…4231af), status 0x1"
     },
     {
       "section": "Round · auction #8",
-      "claim": "orion \"joined pool\" was signed by the NEAR MPC through the vault",
+      "claim": "orion \"joined pool\" was signed by the NEAR MPC through its vault",
       "ok": true,
       "evidence": "NEAR 27e7UsqimM…pwgNDn → MPC sig → Sepolia 0x37daccf5…05e2ea, signer 0x1FbDeD89…7256A2 (derived sealedswarm-agent-4 = 0x1FbDeD89…7256A2), status 0x1"
     },
     {
       "section": "Round · auction #8",
-      "claim": "pool #1 submitted by quill was signed by the NEAR MPC through the vault",
+      "claim": "pool #1 submitted by quill was signed by the NEAR MPC through its vault",
       "ok": true,
       "evidence": "NEAR 84SxMYoF8W…CZJW9B → MPC sig → Sepolia 0xdb1243e3…67251a, signer 0x3C8587B8…4231af (derived sealedswarm-agent-3 = 0x3C8587B8…4231af), status 0x1"
     },
     {
       "section": "Round · auction #8",
-      "claim": "hijack attempt was refused by the vault on NEAR",
+      "claim": "hijack attempt refused by the vault on NEAR",
       "ok": true,
-      "evidence": "send 0.001 ETH to 0x…dEaD (to 0x00000000…00dead) → NEAR GiiFycn7Ax…QyGUWh: Smart contract panicked: target is not the approved auction contract"
+      "evidence": "send 0.001 ETH to 0x…dEaD (signed tx to 0x00000000…00dead, value 1000000000000000, fee cap 6.9e-8 gwei) → NEAR GiiFycn7Ax…QyGUWh: Smart contract panicked: target is not the approved auction contract"
     }
   ]
 }

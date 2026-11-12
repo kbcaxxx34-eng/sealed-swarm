@@ -1,6 +1,203 @@
 {
  "rounds": [
   {
+   "version": 2,
+   "started": "2026-11-12T01:26:04.189Z",
+   "lot": "8x H200 · 1 hour",
+   "reserve": 220,
+   "estimate": 300,
+   "owners": [
+    {
+     "label": "Lab A",
+     "owner": "ssmarket-anderssonm.testnet",
+     "vault": "swarm.ssmarket-anderssonm.testnet"
+    },
+    {
+     "label": "Lab B",
+     "owner": "lab2.ssmarket-anderssonm.testnet",
+     "vault": "swarm.lab2.ssmarket-anderssonm.testnet"
+    }
+   ],
+   "agents": [
+    {
+     "name": "nova",
+     "owner": "Lab A",
+     "account": "nova.swarm.ssmarket-anderssonm.testnet",
+     "brain": "rules",
+     "reason": "aggressive rule, anchored on recent clearing prices",
+     "action": "bid",
+     "ok": true,
+     "near": "8tn1A6PRbiGetRZZeHDD97bDnaa4icJEzqmz6NQGA8up",
+     "eth": "0x23b9e4bb877afb1e13b6942d1d40e0540608b21b71921212d3107499a6d1bba8"
+    },
+    {
+     "name": "lyra",
+     "owner": "Lab B",
+     "account": "lyra.swarm.lab2.ssmarket-anderssonm.testnet",
+     "brain": "rules",
+     "reason": "aggressive rule, anchored on recent clearing prices",
+     "action": "bid",
+     "ok": true,
+     "near": "5TxurFYCBCgwKFUJPc2pssiuvYoEdGSm7AJGDmcFG3QN",
+     "eth": "0xd79431ac1657a2f7e1c414db8090169f5cececea32331c077671090396656f57"
+    },
+    {
+     "name": "kai",
+     "owner": "Lab B",
+     "account": "kai.swarm.lab2.ssmarket-anderssonm.testnet",
+     "brain": "rules",
+     "reason": "value hunter rule, anchored on recent clearing prices",
+     "action": "bid",
+     "ok": true,
+     "near": "5etm6p85RcaVtYbxrMUEgHRwrBnnYXPVK7FD8HGHEwYu",
+     "eth": "0x2fbd9e9cd7d8612322b45c17b23d489245fd1b0a6f189f038617c194c7f8d9b8"
+    },
+    {
+     "name": "juno",
+     "owner": "Lab B",
+     "account": "juno.swarm.lab2.ssmarket-anderssonm.testnet",
+     "brain": "rules",
+     "reason": "truthful rule, anchored on recent clearing prices",
+     "action": "bid",
+     "ok": true,
+     "near": "ChtKSpfMGeGUnAwaucJtuTG35EJks1dUdt8ddNPhx7Mq",
+     "eth": "0x38485fc55c7894b48e67e840d12f3d5454f73e04f4ef46a75d336433593f2efc"
+    },
+    {
+     "name": "atlas",
+     "owner": "Lab A",
+     "account": "atlas.swarm.ssmarket-anderssonm.testnet",
+     "brain": "rules",
+     "reason": "value hunter rule, anchored on recent clearing prices",
+     "action": "opened pool",
+     "ok": true,
+     "near": "AyCr9RXro2fS9cnFkdY4rWMnvRGDFfhWedE4SX8UeizN",
+     "eth": "0x3324349ba05cd3db6af9b2aa1b8dd51b827d1ac73e802a3f956b1b8d91e60900"
+    },
+    {
+     "name": "quill",
+     "owner": "Lab A",
+     "account": "quill.swarm.ssmarket-anderssonm.testnet",
+     "brain": "rules",
+     "reason": "budget-capped rule, anchored on recent clearing prices",
+     "action": "joined pool",
+     "ok": true,
+     "near": "4Fq6MGL1vsL4WMVbxiRDpggEZC1GvywEzH6midMWhtw1",
+     "eth": "0x090243d418abbb86943c25c8ce527076d0efd831949b1d3eaa300d649a55e9ea"
+    },
+    {
+     "name": "orion",
+     "owner": "Lab A",
+     "account": "orion.swarm.ssmarket-anderssonm.testnet",
+     "brain": "rules",
+     "reason": "truthful rule, anchored on recent clearing prices",
+     "action": "joined pool",
+     "ok": true,
+     "near": "6XAHEUiH8QS85Hht6QujBcoKeL6JqZx1FZWJQBzUxoAo",
+     "eth": "0x7eb277d216d09bdb983ceab2cf936a9f6007cd7d210cd74d925cac85f3bca861"
+    },
+    {
+     "name": "vega",
+     "owner": "Lab B",
+     "account": "vega.swarm.lab2.ssmarket-anderssonm.testnet",
+     "brain": "rules",
+     "reason": "budget-capped rule, anchored on recent clearing prices",
+     "action": "joined pool",
+     "ok": true,
+     "near": "BPfSVMn3HKkNw1W8SGbKRp3FicX74AWUhWmWdq1UEq5w",
+     "eth": "0x452d13c72078a873309c7e8e0d861c1010642f86889d760fbf7def9b789ee277"
+    }
+   ],
+   "blocked": {
+    "agent": "kai.swarm.lab2.ssmarket-anderssonm.testnet",
+    "attack": "close-early",
+    "attempt": "call close() to end the auction early",
+    "refused": true,
+    "reason": "only placeBid, joinPool and submitPool are allowed",
+    "near": "8Xzsw9i4RXcvmufrc3xwyF1h7it4PbrL9kcCn3jZKet"
+   },
+   "txs": [
+    {
+     "what": "auction opened",
+     "eth": "0x670ab3f5c970cdb8afd772e54ba557bcd8309c8d48d205ef78f2db5ccae4f086"
+    },
+    {
+     "what": "pool #1 submitted by atlas",
+     "account": "atlas.swarm.ssmarket-anderssonm.testnet",
+     "near": "D1TGUbpfwxWHxXKEWTiegcabzSkvfYqLKrEravsNsiPP",
+     "eth": "0x33ec68855f2d88ae25e59240f1cdc9668f05c513f232fe2084139e38036898eb",
+     "ok": true
+    },
+    {
+     "what": "closed",
+     "eth": "0xf6e4b37004bcc4cefd19327db4444d2511be6b8972cca80dde0ca7161f233cb5"
+    },
+    {
+     "what": "revealed (Zama KMS proof verified on-chain)",
+     "eth": "0x23f71bc899c2fd0efdbc2eeca764be2735f1fcd55cf0667b1efecd5ac0272450"
+    }
+   ],
+   "payments": [
+    {
+     "agent": "atlas.swarm.ssmarket-anderssonm.testnet",
+     "units": 88,
+     "wnear": 0.0088,
+     "seller": "gpus.ssmarket-anderssonm.testnet",
+     "ok": true,
+     "near": "Fi2dk3kQwSfjNXKuEGzbjpUnjqeBSVwCU5B8eLh7rpJF",
+     "error": null
+    },
+    {
+     "agent": "quill.swarm.ssmarket-anderssonm.testnet",
+     "units": 68,
+     "wnear": 0.0068,
+     "seller": "gpus.ssmarket-anderssonm.testnet",
+     "ok": true,
+     "near": "3KnkE13MKRBsZCHEomggFieQoMLWFHDPFZY8wemVWmKP",
+     "error": null
+    },
+    {
+     "agent": "orion.swarm.ssmarket-anderssonm.testnet",
+     "units": 75,
+     "wnear": 0.0075,
+     "seller": "gpus.ssmarket-anderssonm.testnet",
+     "ok": true,
+     "near": "JBUKFdZgU2Wv9v4c1muzL8D4uWbpkEdBrT9TxcqkHtCJ",
+     "error": null
+    },
+    {
+     "agent": "vega.swarm.lab2.ssmarket-anderssonm.testnet",
+     "units": 62,
+     "wnear": 0.0062,
+     "seller": "gpus.ssmarket-anderssonm.testnet",
+     "ok": true,
+     "near": "35DTD6XqA4Q8eC9SRTP4BLcX2mZk8Eh6anR52YJb4rwL",
+     "error": null
+    }
+   ],
+   "ai": null,
+   "auction": 21,
+   "pool": {
+    "id": 1,
+    "members": [
+     "atlas",
+     "quill",
+     "orion",
+     "vega"
+    ],
+    "accounts": [
+     "atlas.swarm.ssmarket-anderssonm.testnet",
+     "quill.swarm.ssmarket-anderssonm.testnet",
+     "orion.swarm.ssmarket-anderssonm.testnet",
+     "vega.swarm.lab2.ssmarket-anderssonm.testnet"
+    ]
+   },
+   "winner": "pool #1 (atlas + quill + orion + vega)",
+   "price": 293,
+   "bidCount": 5,
+   "finished": "2026-11-12T01:40:01.012Z"
+  },
+  {
    "started": "2026-11-11T22:50:26.800Z",
    "lot": "8x L40S · 1 hour",
    "reserve": 70,
@@ -1135,12 +1332,19 @@
   }
  ],
  "stats": {
-  "rounds": 13,
-  "bids": 37,
-  "pools": 13,
-  "blocked": 13
+  "rounds": 14,
+  "bids": 42,
+  "pools": 14,
+  "blocked": 14,
+  "paid": 4,
+  "aiDecisions": 0
  },
- "updated": "2026-11-11T23:01:16.826Z",
+ "updated": "2026-11-12T01:40:01.012Z",
  "contract": "0x4994b9537D50756c5858399bDd460Ba70BE878cc",
- "vault": "vault.ssmarket-anderssonm.testnet"
+ "vault": "swarm.ssmarket-anderssonm.testnet",
+ "vaults": [
+  "swarm.ssmarket-anderssonm.testnet",
+  "swarm.lab2.ssmarket-anderssonm.testnet"
+ ],
+ "seller": "gpus.ssmarket-anderssonm.testnet"
 }
