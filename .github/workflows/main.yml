@@ -1,47 +1,73 @@
-name: Main
+name: CI
 
+# Runs on every push and PR, and once a day against the live chains, so the badge in the README
+# always reflects the current on-chain state, not just the code.
 on:
   push:
-    branches:
-      - main
+  pull_request:
+  workflow_dispatch:
+  schedule:
+    - cron: "17 6 * * *"
 
 permissions:
   contents: read
 
 jobs:
-  build-and-test-windows:
-    runs-on: windows-latest
-    steps:
-      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
-        with:
-          persist-credentials: "false"
-      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
-        with:
-          node-version: 22.x
-      - uses: foundry-rs/foundry-toolchain@82dee4ba654bd2146511f85f0d013af94670c4de # v1.4.0
-        with:
-          version: stable
-      - run: npm ci
-      - run: npm run compile
-      - run: npm run build:ts
-      - run: npm test
-      - run: npm run coverage
-  build-and-test-unix:
+  test:
+    name: Tests + simulation (no keys)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
-        with:
-          persist-credentials: "false"
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
           node-version: 22.x
-      - uses: foundry-rs/foundry-toolchain@82dee4ba654bd2146511f85f0d013af94670c4de # v1.4.0
-        with:
-          version: stable
+          cache: npm
       - run: npm ci
-      - run: npm run prettier:check
-      - run: npm run lint
       - run: npm run compile
-      - run: npm run build:ts
-      - run: npm test
-      - run: npm run coverage
+      - name: Auction + buyer-pool tests (FHE mock) and NEAR vault tests
+        run: npm run test:all
+      - name: Vault wasm build is reproducible (rebuilt wasm = committed wasm = deployed code)
+        run: git diff --exit-code -- near-vault/build/swarm_vault.wasm app/src/swarm_vault.wasm
+      - name: Market simulation (5 auctions, 20 agents, 5 vaults)
+        run: npm run simulate | tee simulation-output.txt
+      - uses: actions/upload-artifact@v4
+        with:
+          name: simulation-output
+          path: simulation-output.txt
+
+  verify:
+    name: On-chain verification (NEAR testnet + Sepolia)
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: 22.x
+          cache: npm
+      - run: npm ci
+      - run: npm run compile
+      - run: npm ci
+        working-directory: verify
+      - name: Recheck deployment and every live market round against public RPC
+        run: npm run verify
+        working-directory: verify
+      - name: Show report
+        if: always()
+        run: cat verify/REPORT.md >> "$GITHUB_STEP_SUMMARY" || true
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: verification-report
+          path: |
+            verify/REPORT.md
+            verify/report.json
+            verify/market.snapshot.json
+      - name: Commit the daily report (main only)
+        if: success() && github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+        run: |
+          git config user.name "sealedswarm-verifier"
+          git config user.email "actions@users.noreply.github.com"
+          git add verify/REPORT.md verify/report.json verify/market.snapshot.json
+          git diff --cached --quiet || (git commit -m "verify: daily on-chain report [skip ci]" && git push)
