@@ -116,11 +116,46 @@ export async function proveDecision(proof, attestations) {
   return { ok: hashes && bound, text: `TEE signature over the exact request+response ${hashes ? "✔" : "✗"}, signer ${signer.slice(0, 8)}… bound to a TDX quote with a fresh nonce ${bound ? "✔" : "✗"}` };
 }
 
+// privacy: each bid is decryptable only by its own bidder (Zama ACL on Sepolia); only winner + price are public
+const ACL = "0xf0Ffdc93b7E186bC2f8CB3dAA75D86d1930A433D";
+const word = (v) => (typeof v === "bigint" ? v.toString(16) : v.replace(/^0x/, "").toLowerCase()).padStart(64, "0");
+const ethCall = (to, data) => post(ETH_RPC, "eth_call", [{ to, data }, "latest"]);
+const bool = (h) => BigInt(h) !== 0n;
+export async function proveSealed(r) {
+  const id = BigInt(r.auction);
+  const res = await ethCall(AUCTION, "0x41c014b7" + word(id)); // getResultHandles
+  const [wh, ph] = ["0x" + res.slice(2, 66), "0x" + res.slice(66, 130)];
+  const pub = async (h) => bool(await ethCall(ACL, "0xc0d02943" + word(h))); // isAllowedForDecryption
+  const allowed = async (h, a) => bool(await ethCall(ACL, "0x82027b6d" + word(h) + word(a))); // isAllowed
+  const entrants = r.agents.filter((a) => a.ok && a.eth);
+  const addrs = await Promise.all(entrants.map(async (a) => { const { vault, index } = await agentIndex(a.account); return derivedAddress(vault, index); }));
+  let sealed = 0;
+  for (const [i, a] of addrs.entries()) {
+    const h = await ethCall(AUCTION, "0xeba1b60b" + word(id) + word(a)); // getBid
+    const other = addrs[(i + 1) % addrs.length];
+    if (!(await pub(h)) && (await allowed(h, a)) && (other === a || !(await allowed(h, other)))) sealed++;
+  }
+  const resultPublic = (await pub(wh)) && (await pub(ph));
+  return { ok: resultPublic && sealed === entrants.length, text: `${sealed}/${entrants.length} bids decryptable only by their own bidder (Zama ACL); winner and price public: ${resultPublic}` };
+}
+
+/** a copy of a round with forged claims, to show that the verifier refuses them */
+export function forge(r) {
+  const f = JSON.parse(JSON.stringify(r));
+  const signed = f.agents.filter((a) => a.ok && a.eth);
+  const lies = [];
+  if (signed.length >= 2) { [signed[0].eth, signed[1].eth] = [signed[1].eth, signed[0].eth]; lies.push(`the dashboard claims ${signed[0].name} and ${signed[1].name} sent each other's Sepolia transactions`); }
+  if (f.payments?.length) { f.payments[0].units += 1; lies.push(`the dashboard claims ${f.payments[0].agent.split(".")[0]} paid 0.0001 wNEAR more than it did`); }
+  if (f.blocked?.near) { f.blocked.reason = "approved by policy"; lies.push("the dashboard claims the hijack was approved"); }
+  return { forged: f, lies };
+}
+
 /** all checks for one dashboard round; onLine(ok, text) is called as each check finishes */
 export async function verifyRound(r, base, onLine) {
   const run = async (label, p) => { try { const x = await p; onLine(x.ok, `${label}: ${x.text}`); } catch (e) { onLine(false, `${label}: ${e.message}`); } };
   for (const a of r.agents) if (a.ok && a.near && a.eth) await run(`${a.name} ${a.action}`, proveAction(a.account, a.near, a.eth));
   for (const t of r.txs) if (t.near && t.eth) { const acct = t.account ?? r.agents.find((x) => x.name === t.what.split(" by ")[1])?.account; await run(t.what, proveAction(acct, t.near, t.eth)); }
+  await run("bids stay sealed", proveSealed(r));
   if (r.blocked?.near) await run(`hijack (${r.blocked.attempt})`, proveRefusal({ ...r.blocked, reason: r.blocked.reason || "target is not the approved auction contract" }));
   for (const p of r.payments || []) await run(`${p.agent.split(".")[0]} paid`, provePayment(p));
   if (r.ai?.proofs) {
