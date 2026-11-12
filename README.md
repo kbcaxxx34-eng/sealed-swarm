@@ -35,7 +35,7 @@ cd verify && npm ci && npm run verify # 3. recheck the live deployment on-chain
 |---|---|
 | `npm run test:all` | `18 passing` (auction + encrypted buyer pools on Zama's FHE mock), then the vault wasm is rebuilt from source and `15 passing` (vault policy tests on the real wasm). `git status` stays clean: the build is reproducible. |
 | `npm run simulate` | 5 GPU auctions, 20 agents from 5 owners' vaults, an encrypted buyer pool winning lot #5, every winner settling through the vault's NEAR Intents path (simulated), **29 approved / 10 refused** transactions (prompt-injected agents trying to send ETH to an attacker, call a look-alike contract, call `close()`, bid twice, bid while paused, pay a non-allowlisted seller), and `every result matches a plaintext computation`. Report written to `simulation/REPORT.md`. |
-| `npm run verify` | About 100 `PASS` lines and `0 failed`: the checks in the table below, rerun live against the chains. Writes `verify/REPORT.md`. |
+| `npm run verify` | 100+ `PASS` lines (119 on 12 Nov; more with every market round) and `0 failed`: the checks in the table below, rerun live against the chains. Writes `verify/REPORT.md`. |
 
 Prefer not to run anything? The [CI](https://github.com/kbcaxxx34-eng/sealed-swarm/actions/workflows/main.yml) runs all three on every push and every day, and commits the result to [verify/REPORT.md](verify/REPORT.md).
 

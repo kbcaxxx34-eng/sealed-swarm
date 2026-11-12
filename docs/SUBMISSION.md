@@ -19,4 +19,9 @@ NEAR's role: each owner deploys a swarm vault contract. Every agent is a NEAR su
 
 Live: a market bot runs 4 agents from a vault on NEAR testnet + Sepolia every 3 hours, including a blocked hijack attempt each round: https://sealedbid.lercomigo.space/swarm/market/
 
-Try it without a wallet: npm install && npm run simulate runs 5 auctions, 20 agents from 5 vaults, a winning buyer pool and 10 blocked attacks, checked against plaintext. 33 tests.
+Check it without a wallet or keys (the README has a do-X / see-Y table):
+- npm ci && npm run test:all: 33 tests (18 auction + pool on the FHE mock, 15 on the real vault wasm); the wasm rebuild is byte-identical to the deployed code.
+- npm run simulate: 5 auctions, 20 agents from 5 vaults, a winning buyer pool and 10 blocked attacks, checked against plaintext.
+- cd verify && npm ci && npm run verify: rechecks the live deployment from public RPC (119 checks on 12 Nov, more with every round). Deployed vault code = repo wasm, 0 vault keys, request_sign-only agent keys, Sepolia bytecode = repo contract, and for every live-market action that the NEAR request_sign transaction plus the NEAR MPC signature rebuild exactly the Sepolia transaction from the agent's derived address. Every hijack attempt failed on NEAR.
+
+CI runs all three on every push and daily, and commits verify/REPORT.md.
