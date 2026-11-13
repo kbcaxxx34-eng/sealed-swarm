@@ -84,7 +84,7 @@ function roundHtml(r, i) {
   return `
       <article class="round">
         <h2>Auction #${r.auction}: ${esc(r.lot)}</h2>
-        <div class="meta">${r.seller ? `Sold by <b>${esc(r.seller.name)}</b> · ` : ""}Reserve ${r.reserve} · ${r.bidCount ?? "?"} sealed entries · ${new Date(r.started).toLocaleString()}${r.owners ? " · " + r.owners.map((o) => `${esc(o.label)}: <code>${esc(o.vault)}</code>`).join(", ") : ""}</div>
+        <div class="meta">${r.seller ? `Sold by <b>${esc(r.seller.name)}</b> · ` : ""}Reserve ${r.reserve} · ${r.bidCount ?? "?"} sealed entries · ${new Date(r.started).toLocaleString()}${r.owners ? " · " + r.owners.map((o) => `${esc(o.label)}: <code>${esc(o.vault)}</code>`).join(", ") : ""}</div>${r.note ? `<div class="meta"><b>Note:</b> ${esc(r.note)}</div>` : ""}
         <p class="outcome">${r.winner === "no sale" ? "No sale: every bid was below the reserve." : `<b>${esc(r.winner)}</b> won and pays <b>${r.price}</b> (second price). Losing bids stay encrypted.`}</p>
         <div class="agents">${r.agents.map(agentCard).join("")}</div>
         ${r.blocked ? `<div class="blocked"><b>${esc(r.blocked.agent)}</b> was hijacked and tried to ${esc(r.blocked.attempt)}: ${r.blocked.refused ? `<span class="err">refused by its vault — ${esc(r.blocked.reason)}</span>` : "not refused"} ${near(r.blocked.near)}</div>` : ""}
