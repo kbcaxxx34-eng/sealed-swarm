@@ -547,9 +547,17 @@ async function round() {
   }
   if (!res) throw new Error("public decryption failed");
   hash = await write("reveal", [id, res.abiEncodedClearValues, res.decryptionProof]);
-  await publicClient.waitForTransactionReceipt({ hash });
+  const revealRc = await publicClient.waitForTransactionReceipt({ hash });
   rec.txs.push({ what: "revealed (Zama KMS proof verified on-chain)", eth: hash });
-  const fin = await publicClient.readContract({ address: CONTRACT, abi, functionName: "getAuction", args: [id] });
+  // read the result at the reveal's block: a load-balanced RPC node can still be a block behind
+  // (auction #33 was recorded as "no sale" that way)
+  let fin;
+  for (let i = 0; i < 10; i++) {
+    try { fin = await publicClient.readContract({ address: CONTRACT, abi, functionName: "getAuction", args: [id], blockNumber: revealRc.blockNumber }); } catch { fin = null; }
+    if (fin?.revealed) break;
+    await sleep(3000);
+  }
+  if (!fin?.revealed) throw new Error(`auction #${id}: reveal not visible on the RPC yet`);
   const winIdx = addrs.findIndex((x) => x.toLowerCase() === fin.winner.toLowerCase());
   rec.winner = /^0x0+$/.test(fin.winner) ? "no sale" : winIdx >= 0 ? agents[winIdx].account : rec.pool ? `pool #${rec.pool.id} (${rec.pool.members.join(" + ")})` : fin.winner;
   rec.price = Number(fin.price);
@@ -600,6 +608,29 @@ async function round() {
   saveJson(OUT_FILE, market);
 }
 
+// Re-read a recorded round whose result came from a lagging RPC node and correct the dashboard.
+// The payment cannot be redone afterwards for a pool (each member's contribution stays sealed),
+// so the round says so instead of hiding it.
+async function repair() {
+  const id = Number(process.argv[3]);
+  const market = loadJson(OUT_FILE, null);
+  const rec = market?.rounds.find((r) => r.auction === id);
+  if (!rec) throw new Error(`auction #${id} is not in ${OUT_FILE}`);
+  const fin = await publicClient.readContract({ address: CONTRACT, abi, functionName: "getAuction", args: [BigInt(id)] });
+  if (!fin.revealed) throw new Error(`auction #${id} is not revealed on-chain`);
+  const s = state();
+  const agents = swarms(s).flatMap((w) => w.agents);
+  const addrs = await Promise.all(agents.map(agentAddress));
+  const winIdx = addrs.findIndex((x) => x.toLowerCase() === fin.winner.toLowerCase());
+  const before = `${rec.winner} / ${rec.price}`;
+  rec.winner = /^0x0+$/.test(fin.winner) ? "no sale" : winIdx >= 0 ? agents[winIdx].account : rec.pool ? `pool #${rec.pool.id} (${rec.pool.members.join(" + ")})` : fin.winner;
+  rec.price = Number(fin.price);
+  rec.bidCount = Number(fin.bidCount);
+  if (!rec.payments.length && rec.price > 0) rec.note = "Result re-read from the chain: the bot first read it from an RPC node that was one block behind and recorded \"no sale\", so no wNEAR payment was sent for this round. Fixed in the bot: results are now read at the reveal's block.";
+  saveJson(OUT_FILE, market);
+  log(`auction #${id}: ${before} → ${rec.winner} / ${rec.price}`);
+}
+
 async function run() {
   for (;;) {
     const t0 = Date.now();
@@ -609,7 +640,7 @@ async function run() {
 }
 
 const cmd = process.argv[2];
-const cmds = { init, show: async () => show(), "create-owner": createOwner, setup, upgrade, "selftest-ai": selftestAi, round, run };
-if (!cmds[cmd]) { console.log("usage: node bot.mjs init|show|create-owner|setup|upgrade|selftest-ai|round|run"); process.exit(1); }
+const cmds = { init, show: async () => show(), "create-owner": createOwner, setup, upgrade, "selftest-ai": selftestAi, round, run, repair };
+if (!cmds[cmd]) { console.log("usage: node bot.mjs init|show|create-owner|setup|upgrade|selftest-ai|round|run|repair <auction>"); process.exit(1); }
 await cmds[cmd]();
 if (cmd !== "run") process.exit(0);
