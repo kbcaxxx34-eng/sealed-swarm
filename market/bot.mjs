@@ -405,6 +405,18 @@ async function upgrade() {
 
 // agents pay their own NEAR gas; a request_sign prepays 300 Tgas
 async function topUpAgentsNear(s) {
+  // the vault pays NEAR storage for every entry it records (~1 kB a round): keep 0.1 NEAR above what
+  // its storage locks, or its calls fail with LackBalanceForState (rounds #40-#48 did)
+  for (const w of swarms(s)) {
+    try {
+      const v = await nearRpc.query({ request_type: "view_account", finality: "final", account_id: w.vault });
+      const locked = BigInt(v.storage_usage) * 10n ** 19n;
+      if (BigInt(v.amount) < locked + 100n * MILLI) {
+        const r = await nearSend(w.ownerId, w.ownerKeyStr, w.vault, [actionCreators.transfer(500n * MILLI)]);
+        log("topped up vault", w.vault, r.failure || "0.5 NEAR");
+      }
+    } catch (e) { log("vault top-up failed:", w.vault, e.message); }
+  }
   for (const w of swarms(s)) for (const a of w.agents) {
     // a 300 Tgas call needs ~0.3 NEAR of balance up front (mostly refunded): keep agents above 0.45
     if ((await nearBalance(a.account)) < 450n * MILLI) {
@@ -626,6 +638,16 @@ async function repair() {
   rec.winner = /^0x0+$/.test(fin.winner) ? "no sale" : winIdx >= 0 ? agents[winIdx].account : rec.pool ? `pool #${rec.pool.id} (${rec.pool.members.join(" + ")})` : fin.winner;
   rec.price = Number(fin.price);
   rec.bidCount = Number(fin.bidCount);
+  // retry a payment that failed (e.g. the vault was short of NEAR for storage) when one agent won
+  const failed = rec.payments.filter((p) => !p.ok);
+  if (failed.length && winIdx >= 0 && rec.payments.length === 1) {
+    await topUpAgentsNear(s);
+    const a = agents[winIdx], payTo = rec.payments[0].seller;
+    const r = await agentSettle(a, BigInt(id), BigInt(rec.price), payTo);
+    rec.payments = [{ agent: a.account, units: rec.price, wnear: rec.price / 10000, seller: payTo, ok: r.ok, near: r.near, error: r.reason }];
+    if (r.ok) { market.stats.paid++; rec.note = "Payment retried after the vault was topped up with NEAR for storage (the first attempt failed with LackBalanceForState)."; }
+    log(`auction #${id}: payment retry ${r.ok ? "ok" : r.reason} ${r.near}`);
+  }
   if (!rec.payments.length && rec.price > 0) rec.note = "Result re-read from the chain: the bot first read it from an RPC node that was one block behind and recorded \"no sale\", so no wNEAR payment was sent for this round. Fixed in the bot: results are now read at the reveal's block.";
   saveJson(OUT_FILE, market);
   log(`auction #${id}: ${before} → ${rec.winner} / ${rec.price}`);
