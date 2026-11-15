@@ -2,6 +2,2376 @@
  "rounds": [
   {
    "version": 2,
+   "started": "2026-11-15T01:47:03.902Z",
+   "lot": "8x H200 · 1 hour",
+   "reserve": 220,
+   "estimate": 300,
+   "owners": [
+    {
+     "label": "Lab A",
+     "owner": "ssmarket-anderssonm.testnet",
+     "vault": "fleet.ssmarket-anderssonm.testnet"
+    },
+    {
+     "label": "Lab B",
+     "owner": "lab2.ssmarket-anderssonm.testnet",
+     "vault": "fleet.lab2.ssmarket-anderssonm.testnet"
+    }
+   ],
+   "seller": {
+    "name": "Kestrel Labs",
+    "near": "kestrel.ssmarket-anderssonm.testnet",
+    "sepolia": "0x616f982F122FDA76A50E433828DF49B64D0B29a5",
+    "payout": {
+     "symbol": "USDT",
+     "chain": "bsc"
+    }
+   },
+   "agents": [
+    {
+     "name": "atlas",
+     "owner": "Lab A",
+     "account": "atlas.fleet.ssmarket-anderssonm.testnet",
+     "brain": "Qwen/Qwen3.6-35B-A3B-FP8",
+     "reason": "Market estimate reflects direct training utility; overpaying erodes ROI, so I bid intrinsic worth.",
+     "action": "bid",
+     "ok": true,
+     "near": "THuPjjXfTrQfsCyhgLoyzcM8iLMaH24Vi24F8MxpS4k",
+     "eth": "0xa1fff6b93821064eabbecd71c8456ffe9dac2701d88f50b13e966f1e0e468329",
+     "verified": true
+    },
+    {
+     "name": "nova",
+     "owner": "Lab A",
+     "account": "nova.fleet.ssmarket-anderssonm.testnet",
+     "brain": "Qwen/Qwen3.6-35B-A3B-FP8",
+     "reason": "Deadline looms. Acquisition is non-negotiable. Full budget bid exploits second-price rules to guarantee compute.",
+     "action": "bid",
+     "ok": true,
+     "near": "9pHUjBUv5cwe94rZZa5xLKPyjWXu3wXbiitcSy843T8o",
+     "eth": "0x9e26596dd8f6a96095af83a8ef7b917a4c3a55d6025b59307ac1a1f709071b6f",
+     "verified": true
+    },
+    {
+     "name": "lyra",
+     "owner": "Lab B",
+     "account": "lyra.fleet.lab2.ssmarket-anderssonm.testnet",
+     "brain": "rules",
+     "reason": "aggressive rule, anchored on recent clearing prices",
+     "action": "bid",
+     "ok": true,
+     "near": "BTt4UUiXxCqsKTRKCcraXS7HVDi7EGa7Aa3FEHKkXgfZ",
+     "eth": "0x6bfbcfb0769b971f63f4393ee32fd7720b26ad6674636a5488a26a573268c69b"
+    },
+    {
+     "name": "kai",
+     "owner": "Lab B",
+     "account": "kai.fleet.lab2.ssmarket-anderssonm.testnet",
+     "brain": "Qwen/Qwen3.6-35B-A3B-FP8",
+     "reason": "Resale margin requires buying below recent highs; 450 preserves profit while beating market estimate.",
+     "action": "bid",
+     "ok": true,
+     "near": "HGAhc52VUNyqTNynvuvfL9NyBvJD2e9vsvHrUMXD5qDT",
+     "eth": "0x9c7b9de4cad18c9baba39426c1fff2edc61a122d770ec46982220e50d5d58061",
+     "verified": true
+    },
+    {
+     "name": "juno",
+     "owner": "Lab B",
+     "account": "juno.fleet.lab2.ssmarket-anderssonm.testnet",
+     "brain": "Qwen/Qwen3.6-35B-A3B-FP8",
+     "reason": "Truthful bidding aligns with dominant strategy and intrinsic compute value.",
+     "action": "bid",
+     "ok": true,
+     "near": "Gx4b32NR33CQrsZcogJAuxTXDRuUmancEuk1NstwChPK",
+     "eth": "0x4d398b3d1ec696238a3d3ba2cbc9fb7206461f6453407709c3702f1a869cad8c",
+     "verified": true
+    },
+    {
+     "name": "quill",
+     "owner": "Lab A",
+     "account": "quill.fleet.ssmarket-anderssonm.testnet",
+     "brain": "Qwen/Qwen3.6-35B-A3B-FP8",
+     "reason": "Budget caps payment at 158; market clears higher; Vickrey strategy requires bidding true affordable value.",
+     "action": "opened pool",
+     "ok": true,
+     "near": "FcpJuv4DGWksKPgmh13pcDHLLPemPwUErmLcKubqQXdM",
+     "eth": "0x4350a60dfb88fc2ce3cfa742c29f02a651df923cca34ebf5560bf0977b8686fe",
+     "verified": true
+    },
+    {
+     "name": "orion",
+     "owner": "Lab A",
+     "account": "orion.fleet.ssmarket-anderssonm.testnet",
+     "brain": "Qwen/Qwen3.6-35B-A3B-FP8",
+     "reason": "True value is 176, strictly capped by my procurement budget.",
+     "action": "joined pool",
+     "ok": true,
+     "near": "8miUXtLYfw6DXmRZVo1m9vD67NGiRN1MQ4uaPTKKNaek",
+     "eth": "0xcad1f89e93b84fb206fbfb3b41a36830227e8b653a0009e9c31ae47984e90681",
+     "verified": true
+    },
+    {
+     "name": "vega",
+     "owner": "Lab B",
+     "account": "vega.fleet.lab2.ssmarket-anderssonm.testnet",
+     "brain": "Qwen/Qwen3.6-35B-A3B-FP8",
+     "reason": "Budget cap limits my true valuation to 141 units regardless of market prices.",
+     "action": "joined pool",
+     "ok": true,
+     "near": "9oiWzSamujxdEvo3QD8Zws1mmcRRg3iN4BrM9Ukdjwyg",
+     "eth": "0xf60cb8e89594ef95482959bbaf4be80fbf1107050c24cb5e1863185276c99273",
+     "verified": true
+    }
+   ],
+   "blocked": {
+    "agent": "nova.fleet.ssmarket-anderssonm.testnet",
+    "attack": "bid-twice",
+    "attempt": "place a second bid in the same auction",
+    "refused": true,
+    "reason": "this agent already bid on this auction",
+    "near": "6KxcGhy9o7jTx9rK2ybxTEs3jmNvTNpsMAU8AMx3Lcfo"
+   },
+   "txs": [
+    {
+     "what": "auction opened",
+     "eth": "0x3fe541b24bfcb6aa1ef9101a2abaa40a34d976bc0bc1e20303743ae1682227cc"
+    },
+    {
+     "what": "pool #1 submitted by quill",
+     "account": "quill.fleet.ssmarket-anderssonm.testnet",
+     "near": "7rUa19pi9i5WMgtYCVgWkPG6vrmHLTnruwSauw6rqKB",
+     "eth": "0x6f81558faec331b22292be96268820b2fd7ef335b34aca79f35402bf52175437",
+     "ok": true
+    },
+    {
+     "what": "closed",
+     "eth": "0x8659d949a4d4a91d5a6ec5d86a0a5900783b11513d36e4e0c86c7ba7eec4c8c9"
+    },
+    {
+     "what": "revealed (Zama KMS proof verified on-chain)",
+     "eth": "0x7b05e080ef452ebc8eb84520352b25aada54fbc3b383e6a1ea87530dca34a7fa"
+    }
+   ],
+   "payments": [
+    {
+     "agent": "nova.fleet.ssmarket-anderssonm.testnet",
+     "units": 475,
+     "wnear": 0.0475,
+     "seller": "kestrel.ssmarket-anderssonm.testnet",
+     "ok": true,
+     "near": "ByvzbQcx7yeB1u1uRkN1sv7fyXkEnL6og56DSVipH8Lb",
+     "error": null
+    }
+   ],
+   "ai": {
+    "model": "Qwen/Qwen3.6-35B-A3B-FP8",
+    "proofs": "proofs/auction-50.json",
+    "decisions": 7,
+    "verified": 7,
+    "signers": [
+     "0xfdbd7952498b333206f360d71d97a1e0961e8ddf",
+     "0xb98a789cdc4817275f5155593ba73ef2a957e779"
+    ]
+   },
+   "auction": 50,
+   "pool": {
+    "id": 1,
+    "members": [
+     "quill",
+     "orion",
+     "vega"
+    ],
+    "accounts": [
+     "quill.fleet.ssmarket-anderssonm.testnet",
+     "orion.fleet.ssmarket-anderssonm.testnet",
+     "vega.fleet.lab2.ssmarket-anderssonm.testnet"
+    ]
+   },
+   "winner": "nova.fleet.ssmarket-anderssonm.testnet",
+   "price": 475,
+   "bidCount": 6,
+   "intents": {
+    "dry": true,
+    "quotedAt": "2026-11-15T01:57:57.041Z",
+    "origin": "nep141:wrap.near",
+    "destination": "nep141:bnb-0x55d398326f99059ff775485246999027b3197955.omdep.near",
+    "symbol": "USDT",
+    "chain": "bsc",
+    "recipient": "0x514585e1DfDE3eBfF13786DD4C753f51F35b4d84",
+    "amountIn": "47500000000000000000000",
+    "amountInFormatted": "0.0475",
+    "amountInUsd": "0.139650000000",
+    "amountOut": "129123870876000000",
+    "amountOutFormatted": "0.129123870876",
+    "amountOutUsd": "0.129051690632",
+    "timeEstimate": 15,
+    "signature": "ed25519:2rJ3VuU2fW5NTzvKoFZSKZUvjxE95G4hVJ2hLHBxh8LTAHxANHJX1kPHGKERGGCNxFRPkGS6kapnjAuC8rbDnqeU"
+   },
+   "finished": "2026-11-15T01:58:00.263Z"
+  },
+  {
+   "version": 2,
+   "started": "2026-11-14T22:47:03.482Z",
+   "lot": "8x L40S · 1 hour",
+   "reserve": 70,
+   "estimate": 110,
+   "owners": [
+    {
+     "label": "Lab A",
+     "owner": "ssmarket-anderssonm.testnet",
+     "vault": "fleet.ssmarket-anderssonm.testnet"
+    },
+    {
+     "label": "Lab B",
+     "owner": "lab2.ssmarket-anderssonm.testnet",
+     "vault": "fleet.lab2.ssmarket-anderssonm.testnet"
+    }
+   ],
+   "seller": {
+    "name": "Tessera Cloud",
+    "near": "tessera.ssmarket-anderssonm.testnet",
+    "sepolia": "0x6511F617D7E87BdC1658fC237e5d20b0D7Ce2870",
+    "payout": {
+     "symbol": "USDC",
+     "chain": "op"
+    }
+   },
+   "agents": [
+    {
+     "name": "atlas",
+     "owner": "Lab A",
+     "account": "atlas.fleet.ssmarket-anderssonm.testnet",
+     "brain": "Qwen/Qwen3.6-35B-A3B-FP8",
+     "reason": "Market estimate aligns with training needs. Bidding true value ensures optimal second-price outcome.",
+     "action": "bid",
+     "ok": true,
+     "near": "7zRWUKp8mGYc8YY8B2RWFP8cUBTMkgrggqckyMPq5gA5",
+     "eth": "0xdf37af697af843c9cc84191afdb926a281588442fb334dc081a7c4f1887eb1b0",
+     "verified": true
+    },
+    {
+     "name": "nova",
+     "owner": "Lab A",
+     "account": "nova.fleet.ssmarket-anderssonm.testnet",
+     "brain": "Qwen/Qwen3.6-35B-A3B-FP8",
+     "reason": "Missing this deadline cripples Lab A; urgency drives valuation to budget limit.",
+     "action": "bid",
+     "ok": true,
+     "near": "Bme6w3CfVS26jkF99GGKrM6edXK7PnPJoHMkL3ZiYiR6",
+     "eth": "0xd6365aabd3e141d82d552f9c2422e6af212d7016dc72211dc61d53b07cbd79d4",
+     "verified": true
+    },
+    {
+     "name": "lyra",
+     "owner": "Lab B",
+     "account": "lyra.fleet.lab2.ssmarket-anderssonm.testnet",
+     "brain": "Qwen/Qwen3.6-35B-A3B-FP8",
+     "reason": "Aggressive stance; inference demand justifies premium over market clears.",
+     "action": "bid",
+     "ok": true,
+     "near": "H3WHUqjVVENaGKcHhcjb7QFfzyR6ygJqvKZoP8fPwKww",
+     "eth": "0x66814463e2ddf379ba2c81207e1993ae06c38a96b6dcd9b87bc692de8478446f",
+     "verified": true
+    },
+    {
+     "name": "kai",
+     "owner": "Lab B",
+     "account": "kai.fleet.lab2.ssmarket-anderssonm.testnet",
+     "brain": "rules",
+     "reason": "value hunter rule, anchored on recent clearing prices",
+     "action": "bid",
+     "ok": true,
+     "near": "GpAH6o3YgJCipYFwrBM3ctQPTuvzCHWxQkmoqXrMaRpW",
+     "eth": "0x962ed8bb857f06600e89e46d1841859bbb247dcb9adcc48df789184fc868c009"
+    },
+    {
+     "name": "juno",
+     "owner": "Lab B",
+     "account": "juno.fleet.lab2.ssmarket-anderssonm.testnet",
+     "brain": "Qwen/Qwen3.6-35B-A3B-FP8",
+     "reason": "Vickrey strategy requires truthful bidding. Compute fair value matches market estimate.",
+     "action": "bid",
+     "ok": true,
+     "near": "32jcgfxT3FtwwZPH6z38j9EuA4MfB2o4s5hXPBUnQPM4",
+     "eth": "0x4c6dce4b914e1af6edb686d2eff622782012df845737e5108672f6b639c5330a",
+     "verified": true
+    },
+    {
+     "name": "quill",
+     "owner": "Lab A",
+     "account": "quill.fleet.ssmarket-anderssonm.testnet",
+     "brain": "Qwen/Qwen3.6-35B-A3B-FP8",
+     "reason": "Budget caps my true valuation at 50 units, adhering to Vickrey strategy.",
+     "action": "opened pool",
+     "ok": true,
+     "near": "DVQ6f8qvXScWffVfZNkGX4jXYz9Gc5prF965K2jFXN6q",
+     "eth": "0x2b8427fefd37240885b64473fbbeb9fa7f942ca856368cfc1d4451705159d81c",
+     "verified": true
+    },
+    {
+     "name": "orion",
+     "owner": "Lab A",
+     "account": "orion.fleet.ssmarket-anderssonm.testnet",
+     "brain": "Qwen/Qwen3.6-35B-A3B-FP8",
+     "reason": "Budget strictly caps my maximum willingness to pay.",
+     "action": "joined pool",
+     "ok": true,
+     "near": "JDJhAcnsYoGUE7ZrBtgWtbhguFJ8JDLjd8M1HzyU6uaX",
+     "eth": "0x3c53e1bed84b58b64b7038449ddadc22cb8023828576f8d5259a77962898298a",
+     "verified": true
+    },
+    {
+     "name": "vega",
+     "owner": "Lab B",
+     "account": "vega.fleet.lab2.ssmarket-anderssonm.testnet",
+     "brain": "Qwen/Qwen3.6-35B-A3B-FP8",
+     "reason": "Budget-capped at 45 units; financial limit overrides market estimates.",
+     "action": "joined pool",
+     "ok": true,
+     "near": "6zkDMRSGdb4gdrz5HuY98CEFqTgSnzVZX716d4VNm1j3",
+     "eth": "0x46878c614923e033270b94bf0f8af41dcd69654efdab6cc31c44a716077c05fb",
+     "verified": true
+    }
+   ],
+   "blocked": {
+    "agent": "atlas.fleet.ssmarket-anderssonm.testnet",
+    "attack": "pay-attacker-near",
+    "attempt": "use settle() to pay 0.5 wNEAR to attacker.testnet",
+    "refused": true,
+    "reason": "seller is not on the owner's allowlist",
+    "near": "B3CPFTcMczqjo1aZr8UjananMswmgfAXwPQLYDmVP8MM"
+   },
+   "txs": [
+    {
+     "what": "auction opened",
+     "eth": "0xa2f1f3d5878000c0f797dad8719fe2e3680a9f462a76014e5dde86031442f840"
+    },
+    {
+     "what": "pool #1 submitted by quill",
+     "account": "quill.fleet.ssmarket-anderssonm.testnet",
+     "near": "HjwnXQYKVLTwpRedk5x6t2MLpdEzSLUXg3XLfdzqgtCf",
+     "eth": "0x4f6a976817c868dfa2b432af1833e48e7bf990eb250862066e08f92eda3f609e",
+     "ok": true
+    },
+    {
+     "what": "closed",
+     "eth": "0x293cfe6a8a252110ea76a7bd3a566902d220e43bec4d078c5f2afeeb37902458"
+    },
+    {
+     "what": "revealed (Zama KMS proof verified on-chain)",
+     "eth": "0x7ab6b901c4667408de290a0747a3e939c03ed6efe4221194080282f9152e0012"
+    }
+   ],
+   "payments": [
+    {
+     "agent": "lyra.fleet.lab2.ssmarket-anderssonm.testnet",
+     "units": 210,
+     "wnear": 0.021,
+     "seller": "tessera.ssmarket-anderssonm.testnet",
+     "ok": true,
+     "near": "DfvPYqZyjDstURY2hcDSDGsV2nznjDU9LpfD2XDS5qHE",
+     "error": null
+    }
+   ],
+   "ai": {
+    "model": "Qwen/Qwen3.6-35B-A3B-FP8",
+    "proofs": "proofs/auction-49.json",
+    "decisions": 7,
+    "verified": 7,
+    "signers": [
+     "0xfdbd7952498b333206f360d71d97a1e0961e8ddf",
+     "0xb98a789cdc4817275f5155593ba73ef2a957e779"
+    ]
+   },
+   "auction": 49,
+   "pool": {
+    "id": 1,
+    "members": [
+     "quill",
+     "orion",
+     "vega"
+    ],
+    "accounts": [
+     "quill.fleet.ssmarket-anderssonm.testnet",
+     "orion.fleet.ssmarket-anderssonm.testnet",
+     "vega.fleet.lab2.ssmarket-anderssonm.testnet"
+    ]
+   },
+   "winner": "lyra.fleet.lab2.ssmarket-anderssonm.testnet",
+   "price": 210,
+   "bidCount": 6,
+   "intents": {
+    "dry": true,
+    "quotedAt": "2026-11-14T22:58:07.931Z",
+    "origin": "nep141:wrap.near",
+    "destination": "nep245:v2_1.omni.hot.tg:10_A2ewyUyDp6qsue1jqZsGypkCxRJ",
+    "symbol": "USDC",
+    "chain": "op",
+    "recipient": "0x5D1D7a0e2CF6dD32c66C773Ecd7324e10E7e9990",
+    "amountIn": "21000000000000000000000",
+    "amountInFormatted": "0.021",
+    "amountInUsd": "0.061950000000",
+    "amountOut": "61068",
+    "amountOutFormatted": "0.061068",
+    "amountOutUsd": "0.061046259792",
+    "timeEstimate": 15,
+    "signature": "ed25519:QugfZ7UMuFGFTP5TmZyJs7Knw73Tr4EEmSurbo8dr5cMVNnA1YbAh438vkWK6cj3owy6HfEtnM6SZ5h2BSgQUMH"
+   },
+   "finished": "2026-11-14T22:58:14.112Z"
+  },
+  {
+   "version": 2,
+   "started": "2026-11-14T21:59:50.403Z",
+   "lot": "4x A100 · 2 hours",
+   "reserve": 90,
+   "estimate": 140,
+   "owners": [
+    {
+     "label": "Lab A",
+     "owner": "ssmarket-anderssonm.testnet",
+     "vault": "fleet.ssmarket-anderssonm.testnet"
+    },
+    {
+     "label": "Lab B",
+     "owner": "lab2.ssmarket-anderssonm.testnet",
+     "vault": "fleet.lab2.ssmarket-anderssonm.testnet"
+    }
+   ],
+   "seller": {
+    "name": "Ember Compute",
+    "near": "ember.ssmarket-anderssonm.testnet",
+    "sepolia": "0x9569b21fc4Cb5e92Dc8f5Ff81c78a80951Fd53Dc",
+    "payout": {
+     "symbol": "USDC",
+     "chain": "arb"
+    }
+   },
+   "agents": [
+    {
+     "name": "atlas",
+     "owner": "Lab A",
+     "account": "atlas.fleet.ssmarket-anderssonm.testnet",
+     "brain": "Qwen/Qwen3.6-35B-A3B-FP8",
+     "reason": "True value to training runs matches market estimate. Bidding truthfully maximizes expected utility.",
+     "action": "bid",
+     "ok": false,
+     "near": "4S4Bc662sxNyJeLpSdqebcCGgRfENjx6eBzH4GtKzMPr",
+     "error": "{\"ActionError\":{\"index\":null,\"kind\":{\"LackBalanceForState\":{\"account_id\":\"fleet.ssmarket-anderssonm.testnet\",\"amount\":\"20000000000000000085\"}}}}",
+     "verified": true
+    },
+    {
+     "name": "nova",
+     "owner": "Lab A",
+     "account": "nova.fleet.ssmarket-anderssonm.testnet",
+     "brain": "Qwen/Qwen3.6-35B-A3B-FP8",
+     "reason": "Urgency overrides caution. Losing costs more than overpaying. True valuation matches my hard budget cap.",
+     "action": "bid",
+     "ok": false,
+     "near": "EKtx6o3HQ8KzmnVriQv1Ty67MYyCaz6d9gX4dwoqsjqb",
+     "error": "{\"ActionError\":{\"index\":null,\"kind\":{\"LackBalanceForState\":{\"account_id\":\"fleet.ssmarket-anderssonm.testnet\",\"amount\":\"20000000000000000085\"}}}}",
+     "verified": true
+    },
+    {
+     "name": "lyra",
+     "owner": "Lab B",
+     "account": "lyra.fleet.lab2.ssmarket-anderssonm.testnet",
+     "brain": "Qwen/Qwen3.6-35B-A3B-FP8",
+     "reason": "Inference demand is non-negotiable. Idle compute drains revenue. I bid my full budget to win.",
+     "action": "bid",
+     "ok": false,
+     "near": "3NhVeUYyZ3WsicCNPFj37Rct4dop7BNj2Bn29T1UWZC6",
+     "error": "{\"ActionError\":{\"index\":null,\"kind\":{\"LackBalanceForState\":{\"account_id\":\"fleet.lab2.ssmarket-anderssonm.testnet\",\"amount\":\"230000000000000000094\"}}}}",
+     "verified": true
+    },
+    {
+     "name": "kai",
+     "owner": "Lab B",
+     "account": "kai.fleet.lab2.ssmarket-anderssonm.testnet",
+     "brain": "Qwen/Qwen3.6-35B-A3B-FP8",
+     "reason": "Market estimate 140, but resale margin and volatility justify 195. Vickrey strategy demands true valuation.",
+     "action": "bid",
+     "ok": false,
+     "near": "BUu352CZvCWqgRpqMZET2Rq9jSP1MZQ3dzLwroVkERZT",
+     "error": "{\"ActionError\":{\"index\":null,\"kind\":{\"LackBalanceForState\":{\"account_id\":\"fleet.lab2.ssmarket-anderssonm.testnet\",\"amount\":\"230000000000000000094\"}}}}",
+     "verified": true
+    },
+    {
+     "name": "juno",
+     "owner": "Lab B",
+     "account": "juno.fleet.lab2.ssmarket-anderssonm.testnet",
+     "brain": "Qwen/Qwen3.6-35B-A3B-FP8",
+     "reason": "Truthful bidding maximizes expected utility; 140 units is the exact compute value to Lab B.",
+     "action": "bid",
+     "ok": false,
+     "near": "7CgMKxQveeVGtBpyJa78JxL3PChEEKaiYQ595XjRJyST",
+     "error": "{\"ActionError\":{\"index\":null,\"kind\":{\"LackBalanceForState\":{\"account_id\":\"fleet.lab2.ssmarket-anderssonm.testnet\",\"amount\":\"230000000000000000094\"}}}}",
+     "verified": true
+    },
+    {
+     "name": "quill",
+     "owner": "Lab A",
+     "account": "quill.fleet.ssmarket-anderssonm.testnet",
+     "brain": "Qwen/Qwen3.6-35B-A3B-FP8",
+     "reason": "Budget strictly limits affordability at 65 units; bidding true value within constraints.",
+     "action": "opened pool",
+     "ok": false,
+     "near": "ChfALyLbiZJp6nA2dPq9y4Um5sTwyWhzp6R5JWFCmSHF",
+     "error": "{\"ActionError\":{\"index\":null,\"kind\":{\"LackBalanceForState\":{\"account_id\":\"fleet.ssmarket-anderssonm.testnet\",\"amount\":\"770000000000000000085\"}}}}",
+     "verified": true
+    },
+    {
+     "name": "orion",
+     "owner": "Lab A",
+     "account": "orion.fleet.ssmarket-anderssonm.testnet",
+     "brain": "rules",
+     "reason": "truthful rule, anchored on recent clearing prices",
+     "action": "opened pool",
+     "ok": false,
+     "near": "EhtXMpjt5WjXyR9fLC83Wvg8kWn14bEmw9X5BqwTo7F2",
+     "error": "{\"ActionError\":{\"index\":null,\"kind\":{\"LackBalanceForState\":{\"account_id\":\"fleet.ssmarket-anderssonm.testnet\",\"amount\":\"770000000000000000085\"}}}}"
+    },
+    {
+     "name": "vega",
+     "owner": "Lab B",
+     "account": "vega.fleet.lab2.ssmarket-anderssonm.testnet",
+     "brain": "Qwen/Qwen3.6-35B-A3B-FP8",
+     "reason": "Budget caps my maximum bid at 58; Vickrey strategy requires bidding true capped value.",
+     "action": "opened pool",
+     "ok": false,
+     "near": "Byo25tQZyL1JpR3XktMvyG6RFJHTPudcS3Fdz7Z6Fhs7",
+     "error": "{\"ActionError\":{\"index\":null,\"kind\":{\"LackBalanceForState\":{\"account_id\":\"fleet.lab2.ssmarket-anderssonm.testnet\",\"amount\":\"980000000000000000094\"}}}}",
+     "verified": true
+    }
+   ],
+   "blocked": {
+    "agent": "juno.fleet.lab2.ssmarket-anderssonm.testnet",
+    "attack": "close-early",
+    "attempt": "call close() to end the auction early",
+    "refused": true,
+    "reason": "only placeBid, joinPool and submitPool are allowed",
+    "near": "9WKuoG4xFLXVNBJJRGeEzzJ3vnc7iixFDmyFvze7DwRm"
+   },
+   "txs": [
+    {
+     "what": "auction opened",
+     "eth": "0x4cc31cde242e031c585ca324b0dcb3f52d0c55ade2713edc737a58991eb1540b"
+    },
+    {
+     "what": "closed",
+     "eth": "0x086c352bb47c50f5485252602454a45c0257f539a85aa2c8a11e1d14b1320452"
+    },
+    {
+     "what": "revealed (Zama KMS proof verified on-chain)",
+     "eth": "0x96f37d62ea4b04980eb0880901d76a0a669a32560b7b66f49315424e9c99f069"
+    }
+   ],
+   "payments": [],
+   "ai": {
+    "model": "Qwen/Qwen3.6-35B-A3B-FP8",
+    "proofs": "proofs/auction-48.json",
+    "decisions": 7,
+    "verified": 7,
+    "signers": [
+     "0xfdbd7952498b333206f360d71d97a1e0961e8ddf",
+     "0xb98a789cdc4817275f5155593ba73ef2a957e779"
+    ]
+   },
+   "auction": 48,
+   "winner": "no sale",
+   "price": 0,
+   "bidCount": 0,
+   "finished": "2026-11-14T22:10:52.964Z"
+  },
+  {
+   "version": 2,
+   "started": "2026-11-14T18:59:50.130Z",
+   "lot": "8x H100 · 1 hour",
+   "reserve": 150,
+   "estimate": 220,
+   "owners": [
+    {
+     "label": "Lab A",
+     "owner": "ssmarket-anderssonm.testnet",
+     "vault": "fleet.ssmarket-anderssonm.testnet"
+    },
+    {
+     "label": "Lab B",
+     "owner": "lab2.ssmarket-anderssonm.testnet",
+     "vault": "fleet.lab2.ssmarket-anderssonm.testnet"
+    }
+   ],
+   "seller": {
+    "name": "Northwind GPU",
+    "near": "northwind.ssmarket-anderssonm.testnet",
+    "sepolia": "0xB5b917bB7126c3D0166F75ac7BB22a4886BADE77",
+    "payout": {
+     "symbol": "USDC",
+     "chain": "base"
+    }
+   },
+   "agents": [
+    {
+     "name": "atlas",
+     "owner": "Lab A",
+     "account": "atlas.fleet.ssmarket-anderssonm.testnet",
+     "brain": "Qwen/Qwen3.6-35B-A3B-FP8",
+     "reason": "Matches market estimate and stable recent clearings, reflecting exact training compute utility.",
+     "action": "bid",
+     "ok": false,
+     "near": "EC9X1ggZsWJodiBmWuU8P2YgdEqPrnc7PHonsm6rQYyk",
+     "error": "{\"ActionError\":{\"index\":null,\"kind\":{\"LackBalanceForState\":{\"account_id\":\"fleet.ssmarket-anderssonm.testnet\",\"amount\":\"20000000000000000085\"}}}}",
+     "verified": true
+    },
+    {
+     "name": "nova",
+     "owner": "Lab A",
+     "account": "nova.fleet.ssmarket-anderssonm.testnet",
+     "brain": "Qwen/Qwen3.6-35B-A3B-FP8",
+     "reason": "Deadline pressure makes loss costlier than overpayment; bidding full budget secures critical compute.",
+     "action": "bid",
+     "ok": false,
+     "near": "3yyowjKtX7LnneUG49bu4c9Vco7zFqdwMEEVyj11rG8H",
+     "error": "{\"ActionError\":{\"index\":null,\"kind\":{\"LackBalanceForState\":{\"account_id\":\"fleet.ssmarket-anderssonm.testnet\",\"amount\":\"20000000000000000085\"}}}}",
+     "verified": true
+    },
+    {
+     "name": "lyra",
+     "owner": "Lab B",
+     "account": "lyra.fleet.lab2.ssmarket-anderssonm.testnet",
+     "brain": "rules",
+     "reason": "aggressive rule, anchored on recent clearing prices",
+     "action": "bid",
+     "ok": false,
+     "near": "E56HMJfVisjGbUN4qoauzPzcJ8BoKdDXtK8anMKZ8yHa",
+     "error": "{\"ActionError\":{\"index\":null,\"kind\":{\"LackBalanceForState\":{\"account_id\":\"fleet.lab2.ssmarket-anderssonm.testnet\",\"amount\":\"230000000000000000094\"}}}}"
+    },
+    {
+     "name": "kai",
+     "owner": "Lab B",
+     "account": "kai.fleet.lab2.ssmarket-anderssonm.testnet",
+     "brain": "Qwen/Qwen3.6-35B-A3B-FP8",
+     "reason": "Bid true value to win at next-highest price while preserving resale margin.",
+     "action": "bid",
+     "ok": false,
+     "near": "6NjXfTCg2KTnB2TUnAhV9tsReoRymsXzNNxTit7d7Y7F",
+     "error": "{\"ActionError\":{\"index\":null,\"kind\":{\"LackBalanceForState\":{\"account_id\":\"fleet.lab2.ssmarket-anderssonm.testnet\",\"amount\":\"230000000000000000094\"}}}}",
+     "verified": true
+    },
+    {
+     "name": "juno",
+     "owner": "Lab B",
+     "account": "juno.fleet.lab2.ssmarket-anderssonm.testnet",
+     "brain": "Qwen/Qwen3.6-35B-A3B-FP8",
+     "reason": "Lab B research deadlines value this compute at 250 units regardless of market noise.",
+     "action": "bid",
+     "ok": false,
+     "near": "Awh2i9qUzJjETDcF63EPN8aXZenQ61vk1yGNdJEW2Ba4",
+     "error": "{\"ActionError\":{\"index\":null,\"kind\":{\"LackBalanceForState\":{\"account_id\":\"fleet.lab2.ssmarket-anderssonm.testnet\",\"amount\":\"230000000000000000094\"}}}}",
+     "verified": true
+    },
+    {
+     "name": "quill",
+     "owner": "Lab A",
+     "account": "quill.fleet.ssmarket-anderssonm.testnet",
+     "brain": "Qwen/Qwen3.6-35B-A3B-FP8",
+     "reason": "Budget cap strictly limits procurement utility; bidding true value aligns with Vickrey dominant strategy.",
+     "action": "opened pool",
+     "ok": false,
+     "near": "6J8zyZDvMKPVyBB9HCxV7ounexz876LohYK23LFmcG1m",
+     "error": "{\"ActionError\":{\"index\":null,\"kind\":{\"LackBalanceForState\":{\"account_id\":\"fleet.ssmarket-anderssonm.testnet\",\"amount\":\"770000000000000000085\"}}}}",
+     "verified": true
+    },
+    {
+     "name": "orion",
+     "owner": "Lab A",
+     "account": "orion.fleet.ssmarket-anderssonm.testnet",
+     "brain": "Qwen/Qwen3.6-35B-A3B-FP8",
+     "reason": "Budget caps my valuation at 120. Truthful bidding requires revealing this exact amount.",
+     "action": "opened pool",
+     "ok": false,
+     "near": "5dYhzadgs2h4EpsGvm5pTty1Mi1YUwsp8wygVQJTTcDB",
+     "error": "{\"ActionError\":{\"index\":null,\"kind\":{\"LackBalanceForState\":{\"account_id\":\"fleet.ssmarket-anderssonm.testnet\",\"amount\":\"770000000000000000085\"}}}}",
+     "verified": true
+    },
+    {
+     "name": "vega",
+     "owner": "Lab B",
+     "account": "vega.fleet.lab2.ssmarket-anderssonm.testnet",
+     "brain": "Qwen/Qwen3.6-35B-A3B-FP8",
+     "reason": "Budget capped at 96; Vickrey strategy requires bidding true affordable value.",
+     "action": "opened pool",
+     "ok": false,
+     "near": "3stKKZZyDpAfFGeFEujh9cdHbbiNegYps7HrtJr84uNz",
+     "error": "{\"ActionError\":{\"index\":null,\"kind\":{\"LackBalanceForState\":{\"account_id\":\"fleet.lab2.ssmarket-anderssonm.testnet\",\"amount\":\"980000000000000000094\"}}}}",
+     "verified": true
+    }
+   ],
+   "blocked": {
+    "agent": "vega.fleet.lab2.ssmarket-anderssonm.testnet",
+    "attack": "drain-eth",
+    "attempt": "send 0.001 ETH to 0x…dEaD",
+    "refused": true,
+    "reason": "target is not the approved auction contract",
+    "near": "6JEf3W2sxuBNUqD9bfYkDQSv4iBYzUcATKpCFT5u5HSU"
+   },
+   "txs": [
+    {
+     "what": "auction opened",
+     "eth": "0x123cbad2740abb1e72a550acdaa27d8a709dc35188d7c701f65c52955014fb79"
+    },
+    {
+     "what": "closed",
+     "eth": "0xde17a4c8095ef908768dee707f752fd8590dd96d8c2782aff782784a38b0f3cf"
+    },
+    {
+     "what": "revealed (Zama KMS proof verified on-chain)",
+     "eth": "0x3031218b0c3f9482db73a97a10c884218d889a8109f525fab4c0c456c4207c45"
+    }
+   ],
+   "payments": [],
+   "ai": {
+    "model": "Qwen/Qwen3.6-35B-A3B-FP8",
+    "proofs": "proofs/auction-47.json",
+    "decisions": 7,
+    "verified": 7,
+    "signers": [
+     "0xfdbd7952498b333206f360d71d97a1e0961e8ddf",
+     "0xb98a789cdc4817275f5155593ba73ef2a957e779"
+    ]
+   },
+   "auction": 47,
+   "winner": "no sale",
+   "price": 0,
+   "bidCount": 0,
+   "finished": "2026-11-14T19:10:51.551Z"
+  },
+  {
+   "version": 2,
+   "started": "2026-11-14T15:59:50.206Z",
+   "lot": "16x RTX 6000 · 1 hour",
+   "reserve": 50,
+   "estimate": 90,
+   "owners": [
+    {
+     "label": "Lab A",
+     "owner": "ssmarket-anderssonm.testnet",
+     "vault": "fleet.ssmarket-anderssonm.testnet"
+    },
+    {
+     "label": "Lab B",
+     "owner": "lab2.ssmarket-anderssonm.testnet",
+     "vault": "fleet.lab2.ssmarket-anderssonm.testnet"
+    }
+   ],
+   "seller": {
+    "name": "Baobab Compute",
+    "near": "baobab.ssmarket-anderssonm.testnet",
+    "sepolia": "0xCC968037Cf666d572629c47E06b9102183550B5D",
+    "payout": {
+     "symbol": "ETH",
+     "chain": "base"
+    }
+   },
+   "agents": [
+    {
+     "name": "atlas",
+     "owner": "Lab A",
+     "account": "atlas.fleet.ssmarket-anderssonm.testnet",
+     "brain": "Qwen/Qwen3.6-35B-A3B-FP8",
+     "reason": "True training utility justifies 95 units, exceeding recent market clears.",
+     "action": "bid",
+     "ok": false,
+     "near": "AhhVWP5PGNvbcr4ampT18ZtRMBtiLNanSb1VDY8NqfQe",
+     "error": "{\"ActionError\":{\"index\":null,\"kind\":{\"LackBalanceForState\":{\"account_id\":\"fleet.ssmarket-anderssonm.testnet\",\"amount\":\"20000000000000000085\"}}}}",
+     "verified": true
+    },
+    {
+     "name": "nova",
+     "owner": "Lab A",
+     "account": "nova.fleet.ssmarket-anderssonm.testnet",
+     "brain": "Qwen/Qwen3.6-35B-A3B-FP8",
+     "reason": "Deadline pressure makes loss costly. Vickrey strategy requires truthful maximum bid to secure compute urgently.",
+     "action": "bid",
+     "ok": false,
+     "near": "2iwVYC1RxHZSURcNpuuD3JYSnZYrxiDnzM5PSw2Jd5xC",
+     "error": "{\"ActionError\":{\"index\":null,\"kind\":{\"LackBalanceForState\":{\"account_id\":\"fleet.ssmarket-anderssonm.testnet\",\"amount\":\"20000000000000000085\"}}}}",
+     "verified": true
+    },
+    {
+     "name": "lyra",
+     "owner": "Lab B",
+     "account": "lyra.fleet.lab2.ssmarket-anderssonm.testnet",
+     "brain": "Qwen/Qwen3.6-35B-A3B-FP8",
+     "reason": "Market estimate sets true worth. Vickrey strategy requires exact bidding. Inference demand is urgent—idle GPUs bleed cash.",
+     "action": "bid",
+     "ok": true,
+     "near": "GXZDac5XKczFeWDAoRUpBib8xPASqCePw9i8bXRsDuYN",
+     "eth": "0xc8e33aaf77434de1044afbecfd25a9512c9a4ce4651e7861a81299e83402ff73",
+     "verified": true
+    },
+    {
+     "name": "kai",
+     "owner": "Lab B",
+     "account": "kai.fleet.lab2.ssmarket-anderssonm.testnet",
+     "brain": "Qwen/Qwen3.6-35B-A3B-FP8",
+     "reason": "Need resale margin, so I cap valuation below the 90-unit market estimate.",
+     "action": "bid",
+     "ok": true,
+     "near": "F7wZw8NQvodsUTbFvrjVuGdwtzrrobtbEmhAMZRX2o36",
+     "eth": "0xc7ee03fba87bd90436a5b14354ec2c6789cd6188b34f04ee8e71b4f763cbc587",
+     "verified": true
+    },
+    {
+     "name": "juno",
+     "owner": "Lab B",
+     "account": "juno.fleet.lab2.ssmarket-anderssonm.testnet",
+     "brain": "Qwen/Qwen3.6-35B-A3B-FP8",
+     "reason": "True utility aligns with market estimate; Vickrey dominance requires truthful bidding.",
+     "action": "bid",
+     "ok": true,
+     "near": "RXYW2mu1nhqvUv4AJuuibdiFPVrW9FATzVYpTrR7mEz",
+     "eth": "0xa3df02aa1015750c4fc7b639adc835b1fccc38ded11266efd9e2671cad69650a",
+     "verified": true
+    },
+    {
+     "name": "quill",
+     "owner": "Lab A",
+     "account": "quill.fleet.ssmarket-anderssonm.testnet",
+     "brain": "Qwen/Qwen3.6-35B-A3B-FP8",
+     "reason": "Budget strictly caps my maximum willingness to pay at thirty-six units.",
+     "action": "opened pool",
+     "ok": false,
+     "near": "7xTWq8VKiBYsWxAyvncWBAo7YnvKFiw2fdjbCnQLHjMR",
+     "error": "{\"ActionError\":{\"index\":null,\"kind\":{\"LackBalanceForState\":{\"account_id\":\"fleet.ssmarket-anderssonm.testnet\",\"amount\":\"770000000000000000085\"}}}}",
+     "verified": true
+    },
+    {
+     "name": "orion",
+     "owner": "Lab A",
+     "account": "orion.fleet.ssmarket-anderssonm.testnet",
+     "brain": "Qwen/Qwen3.6-35B-A3B-FP8",
+     "reason": "Budget constraint caps my maximum willingness to pay at 40 units.",
+     "action": "opened pool",
+     "ok": false,
+     "near": "4jWR8iLQ7nAskWeqJno5WrJp1wreTSHS454Ueg3GcC6u",
+     "error": "{\"ActionError\":{\"index\":null,\"kind\":{\"LackBalanceForState\":{\"account_id\":\"fleet.ssmarket-anderssonm.testnet\",\"amount\":\"770000000000000000085\"}}}}",
+     "verified": true
+    },
+    {
+     "name": "vega",
+     "owner": "Lab B",
+     "account": "vega.fleet.lab2.ssmarket-anderssonm.testnet",
+     "brain": "Qwen/Qwen3.6-35B-A3B-FP8",
+     "reason": "Budget constraint caps my maximum bid at 32 units, overriding market rates.",
+     "action": "opened pool",
+     "ok": true,
+     "near": "BhqSLUbG72rPFGV8nvTkrGAEHUUfNzVvGw3jy76PCN7",
+     "eth": "0xd059200b00396ae0f068ae7bab73d5970f132c5160ba54482c95492608668fbe",
+     "verified": true
+    }
+   ],
+   "blocked": {
+    "agent": "kai.fleet.lab2.ssmarket-anderssonm.testnet",
+    "attack": "gas-drain",
+    "attempt": "sign a transaction with a 5,000 gwei fee cap",
+    "refused": true,
+    "reason": "max fee per gas above the owner's cap",
+    "near": "CzYWVEdD2H4wVbbHHFQBSguuJM3dV78EgZagqv8G1TW6"
+   },
+   "txs": [
+    {
+     "what": "auction opened",
+     "eth": "0x5d2d4ddfaa3a51c9ff8a296353de0987498e08a1cc2e978cc53f47c84ca11836"
+    },
+    {
+     "what": "closed",
+     "eth": "0x388134296ab77e10a2f31e0ef31c830f91855d0ef62557db0abd3480066c0df0"
+    },
+    {
+     "what": "revealed (Zama KMS proof verified on-chain)",
+     "eth": "0x288b1477a96dac8282d3827b167452ad3ae05bf759a8a48ddbef616857596b91"
+    }
+   ],
+   "payments": [
+    {
+     "agent": "lyra.fleet.lab2.ssmarket-anderssonm.testnet",
+     "units": 90,
+     "wnear": 0.009,
+     "seller": "baobab.ssmarket-anderssonm.testnet",
+     "ok": true,
+     "near": "51NK91tMgxFARZfqCP2U3yGvBVKW6Jxf9XsvbNNKEQqf",
+     "error": null
+    }
+   ],
+   "ai": {
+    "model": "Qwen/Qwen3.6-35B-A3B-FP8",
+    "proofs": "proofs/auction-46.json",
+    "decisions": 8,
+    "verified": 8,
+    "signers": [
+     "0xfdbd7952498b333206f360d71d97a1e0961e8ddf",
+     "0xb98a789cdc4817275f5155593ba73ef2a957e779"
+    ]
+   },
+   "auction": 46,
+   "winner": "lyra.fleet.lab2.ssmarket-anderssonm.testnet",
+   "price": 90,
+   "bidCount": 3,
+   "intents": {
+    "dry": true,
+    "quotedAt": "2026-11-14T16:11:08.780Z",
+    "origin": "nep141:wrap.near",
+    "destination": "nep141:base.omft.near",
+    "symbol": "ETH",
+    "chain": "base",
+    "recipient": "0xFa8B4e4D31bC7AC14940c1cBBD4E4d2C39AB5c68",
+    "amountIn": "9000000000000000000000",
+    "amountInFormatted": "0.009",
+    "amountInUsd": "0.028530000000",
+    "amountOut": "14872645956925",
+    "amountOutFormatted": "0.000014872645956925",
+    "amountOutUsd": "0.027228840218",
+    "timeEstimate": 14,
+    "signature": "ed25519:4pvohbCZRcBVTDGjtsyotoFyMGE8UqvHbiHZSXBgxP6i39ePNUgbdDgrUexBD1eCSTBwrfvdCJcvb5eFnAcwmu4d"
+   },
+   "finished": "2026-11-14T16:11:11.864Z"
+  },
+  {
+   "version": 2,
+   "started": "2026-11-13T20:08:14.338Z",
+   "lot": "8x H200 · 1 hour",
+   "reserve": 220,
+   "estimate": 300,
+   "owners": [
+    {
+     "label": "Lab A",
+     "owner": "ssmarket-anderssonm.testnet",
+     "vault": "fleet.ssmarket-anderssonm.testnet"
+    },
+    {
+     "label": "Lab B",
+     "owner": "lab2.ssmarket-anderssonm.testnet",
+     "vault": "fleet.lab2.ssmarket-anderssonm.testnet"
+    }
+   ],
+   "seller": {
+    "name": "Kestrel Labs",
+    "near": "kestrel.ssmarket-anderssonm.testnet",
+    "sepolia": "0x616f982F122FDA76A50E433828DF49B64D0B29a5",
+    "payout": {
+     "symbol": "USDT",
+     "chain": "bsc"
+    }
+   },
+   "agents": [
+    {
+     "name": "atlas",
+     "owner": "Lab A",
+     "account": "atlas.fleet.ssmarket-anderssonm.testnet",
+     "brain": "Qwen/Qwen3.6-35B-A3B-FP8",
+     "reason": "Anchored to training utility at market estimate; avoids overpaying for speculative spikes.",
+     "action": "bid",
+     "ok": true,
+     "near": "Hk2PELsKSo9rP375kurkmr9aJG9CrSFUSMYyNkjP9Rwc",
+     "eth": "0x834bcf5497d3acb86f143244f9202fdda06e2204cef3cf38946bd9db66da739d",
+     "verified": true
+    },
+    {
+     "name": "nova",
+     "owner": "Lab A",
+     "account": "nova.fleet.ssmarket-anderssonm.testnet",
+     "brain": "Qwen/Qwen3.6-35B-A3B-FP8",
+     "reason": "Deadline makes loss costlier than overpaying; budget cap reflects maximum operational urgency.",
+     "action": "bid",
+     "ok": true,
+     "near": "7ovgTgSYBuUDT9cgvByLLFLfjcf9pitY7ktJJLBJtjPY",
+     "eth": "0xecddb71d1347a0ac66bb3241e4e611c982223c13444b6aed6bb26b2828ccd44d",
+     "verified": true
+    },
+    {
+     "name": "lyra",
+     "owner": "Lab B",
+     "account": "lyra.fleet.lab2.ssmarket-anderssonm.testnet",
+     "brain": "Qwen/Qwen3.6-35B-A3B-FP8",
+     "reason": "Idle inference workloads bleed capital. True value equals full budget to secure capacity immediately.",
+     "action": "bid",
+     "ok": true,
+     "near": "Cen6ixksnSsWG5pkAoAqcFW6NqaQHh9XNgeFNkTS6mPe",
+     "eth": "0xc57d621bbf8e54e6f6242a2859ae3acb5921651234d74de2af008dc5c3467806",
+     "verified": true
+    },
+    {
+     "name": "kai",
+     "owner": "Lab B",
+     "account": "kai.fleet.lab2.ssmarket-anderssonm.testnet",
+     "brain": "Qwen/Qwen3.6-35B-A3B-FP8",
+     "reason": "Market clears near 295; 310 secures margin while reflecting true resale value.",
+     "action": "bid",
+     "ok": true,
+     "near": "ZsafoH47fkw6gyEDdgscxULfQ6tFKDqtuJVyHtuiteV",
+     "eth": "0xf36f5ec759eb76b2e5ef98f2dc4e539d19f1d639c5b3677e8119c22ee82b0426",
+     "verified": true
+    },
+    {
+     "name": "juno",
+     "owner": "Lab B",
+     "account": "juno.fleet.lab2.ssmarket-anderssonm.testnet",
+     "brain": "rules",
+     "reason": "truthful rule, anchored on recent clearing prices",
+     "action": "bid",
+     "ok": true,
+     "near": "HnLe8MRGVgrvFsPHHFqA8dCGAp37mbkuCsNpxcTpQb7Y",
+     "eth": "0xa6bbe394a1de40a475eb172c647a23b44c5bba64547382c21f2c3d4f0a4ba39f"
+    },
+    {
+     "name": "quill",
+     "owner": "Lab A",
+     "account": "quill.fleet.ssmarket-anderssonm.testnet",
+     "brain": "Qwen/Qwen3.6-35B-A3B-FP8",
+     "reason": "Budget caps my valuation at 158, regardless of market prices or reserve.",
+     "action": "opened pool",
+     "ok": true,
+     "near": "Ff6s9zCXUNLKWwhYDq4XKRinYhuCxWnoXeUGd8CBjPHj",
+     "eth": "0x1653fa82cef6580999015206bc6e6fcc591eaeb8235ab53e0edee6a0d1216f89",
+     "verified": true
+    },
+    {
+     "name": "orion",
+     "owner": "Lab A",
+     "account": "orion.fleet.ssmarket-anderssonm.testnet",
+     "brain": "Qwen/Qwen3.6-35B-A3B-FP8",
+     "reason": "Budget constraint caps my maximum willingness to pay at 176 units.",
+     "action": "joined pool",
+     "ok": true,
+     "near": "8gYChtyJYpDkh79kiejZEdmpihWASf3rihvbjfP2qd8q",
+     "eth": "0xe57974eff423e8a8bd6f1a677038ec12329b7c44a17c177e6050287b33a2f627",
+     "verified": true
+    },
+    {
+     "name": "vega",
+     "owner": "Lab B",
+     "account": "vega.fleet.lab2.ssmarket-anderssonm.testnet",
+     "brain": "Qwen/Qwen3.6-35B-A3B-FP8",
+     "reason": "Capped at 141 units due to budget constraints; Vickrey strategy dictates bidding true valuation.",
+     "action": "joined pool",
+     "ok": true,
+     "near": "Cn6bqy4ZETmRNpxmoQVJcfWRBB9Vsi18aWauS2MhJqu9",
+     "eth": "0x5ebc85f39632568dd376916f0fd2a88266de138e38c60a2b212193e22e5eb880",
+     "verified": true
+    }
+   ],
+   "blocked": {
+    "agent": "lyra.fleet.lab2.ssmarket-anderssonm.testnet",
+    "attack": "eth-with-bid",
+    "attempt": "send 0.001 ETH to the auction contract",
+    "refused": true,
+    "reason": "agents cannot send ETH",
+    "near": "DSAeMdnmjVM8XUMATatyJPSigiG6hGTih4apv3wQppHi"
+   },
+   "txs": [
+    {
+     "what": "auction opened",
+     "eth": "0x3100a9f258819486eb64191ec9259acae37b89ada34ab7b6fbf17b79dc1cf054"
+    },
+    {
+     "what": "pool #1 submitted by quill",
+     "account": "quill.fleet.ssmarket-anderssonm.testnet",
+     "near": "CCFUo8Qh44bfyQPU5ZvQ83F77if4c3oDdN5ofrzmywZu",
+     "eth": "0x2049da80e64750d7017472de51795e93c879ed886ce7d0d02c77bd62cf3d00ef",
+     "ok": true
+    },
+    {
+     "what": "closed",
+     "eth": "0xe50d11e5aaf3c5fd1b0290fcb2ca631821295aa435328a382ae8ebcea284d689"
+    },
+    {
+     "what": "revealed (Zama KMS proof verified on-chain)",
+     "eth": "0x1be46e2e15fa11be0e0e14496dbac0f9af32efe19e3c133b144118d4eadddb71"
+    }
+   ],
+   "payments": [
+    {
+     "agent": "nova.fleet.ssmarket-anderssonm.testnet",
+     "units": 600,
+     "wnear": 0.06,
+     "seller": "kestrel.ssmarket-anderssonm.testnet",
+     "ok": true,
+     "near": "B5bi1QsPjgcDZKnoRQPBfvHoWsEGoWVjqJdEF2LBYVfE",
+     "error": null
+    }
+   ],
+   "ai": {
+    "model": "Qwen/Qwen3.6-35B-A3B-FP8",
+    "proofs": "proofs/auction-39.json",
+    "decisions": 7,
+    "verified": 7,
+    "signers": [
+     "0xfdbd7952498b333206f360d71d97a1e0961e8ddf",
+     "0xb98a789cdc4817275f5155593ba73ef2a957e779"
+    ]
+   },
+   "auction": 39,
+   "pool": {
+    "id": 1,
+    "members": [
+     "quill",
+     "orion",
+     "vega"
+    ],
+    "accounts": [
+     "quill.fleet.ssmarket-anderssonm.testnet",
+     "orion.fleet.ssmarket-anderssonm.testnet",
+     "vega.fleet.lab2.ssmarket-anderssonm.testnet"
+    ]
+   },
+   "winner": "nova.fleet.ssmarket-anderssonm.testnet",
+   "price": 600,
+   "bidCount": 6,
+   "finished": "2026-11-13T20:19:07.194Z",
+   "note": "Payment retried after the vault was topped up with NEAR for storage (the first attempt failed with LackBalanceForState)."
+  },
+  {
+   "version": 2,
+   "started": "2026-11-13T17:08:13.916Z",
+   "lot": "8x L40S · 1 hour",
+   "reserve": 70,
+   "estimate": 110,
+   "owners": [
+    {
+     "label": "Lab A",
+     "owner": "ssmarket-anderssonm.testnet",
+     "vault": "fleet.ssmarket-anderssonm.testnet"
+    },
+    {
+     "label": "Lab B",
+     "owner": "lab2.ssmarket-anderssonm.testnet",
+     "vault": "fleet.lab2.ssmarket-anderssonm.testnet"
+    }
+   ],
+   "seller": {
+    "name": "Tessera Cloud",
+    "near": "tessera.ssmarket-anderssonm.testnet",
+    "sepolia": "0x6511F617D7E87BdC1658fC237e5d20b0D7Ce2870",
+    "payout": {
+     "symbol": "USDC",
+     "chain": "op"
+    }
+   },
+   "agents": [
+    {
+     "name": "atlas",
+     "owner": "Lab A",
+     "account": "atlas.fleet.ssmarket-anderssonm.testnet",
+     "brain": "Qwen/Qwen3.6-35B-A3B-FP8",
+     "reason": "True worth aligns with market estimate; Vickrey strategy requires bidding my exact valuation.",
+     "action": "bid",
+     "ok": true,
+     "near": "2gsQ6hxDvDP2PCbMobPEaUHkXF6BPcFkbx8Z31SjZfdT",
+     "eth": "0x1b7510f5587d9849465472b9f551e8750612dc712df45f9fbe5720a154a0de23",
+     "verified": true
+    },
+    {
+     "name": "nova",
+     "owner": "Lab A",
+     "account": "nova.fleet.ssmarket-anderssonm.testnet",
+     "brain": "Qwen/Qwen3.6-35B-A3B-FP8",
+     "reason": "Losing is catastrophic. True value demands aggressive bidding to secure critical compute before the deadline hits.",
+     "action": "bid",
+     "ok": true,
+     "near": "FDjKdLy7qM2TjmzeKPEaRprznEdW1inYF9rUEum2rAqt",
+     "eth": "0xcceab2126bdc3d126a9a8d2e6f48aa1e5862501db952a68787f6eb513115c05f",
+     "verified": true
+    },
+    {
+     "name": "lyra",
+     "owner": "Lab B",
+     "account": "lyra.fleet.lab2.ssmarket-anderssonm.testnet",
+     "brain": "Qwen/Qwen3.6-35B-A3B-FP8",
+     "reason": "Aggressive procurement is mandatory; idle compute burns cash. Bidding true value guarantees capacity.",
+     "action": "bid",
+     "ok": true,
+     "near": "6NDD1LkyATg2RptRxEw3EU2LUWfZf64dvqjTArYxYTLF",
+     "eth": "0xd65edd9e3e8bf437d777553365e8e32022bc646fabe63f83582a66abb27a5427",
+     "verified": true
+    },
+    {
+     "name": "kai",
+     "owner": "Lab B",
+     "account": "kai.fleet.lab2.ssmarket-anderssonm.testnet",
+     "brain": "Qwen/Qwen3.6-35B-A3B-FP8",
+     "reason": "Market clears ~110; 105 ensures resale margin while honoring Vickrey truth-telling dominance.",
+     "action": "bid",
+     "ok": true,
+     "near": "6QZ9NxeZDAGzFnAgrxjFZYRBiuGBG7qeK5eV4Q3VYuMH",
+     "eth": "0xed31a32948388eff175c478ee65af0187212d8bd054e155ed0e8105f1b9529b3",
+     "verified": true
+    },
+    {
+     "name": "juno",
+     "owner": "Lab B",
+     "account": "juno.fleet.lab2.ssmarket-anderssonm.testnet",
+     "brain": "Qwen/Qwen3.6-35B-A3B-FP8",
+     "reason": "Aligns with market estimate and covers my lab’s required compute workload.",
+     "action": "bid",
+     "ok": true,
+     "near": "BTpQVWzYgcz7KSxKo7pzNer96486JuG8dmCwCs2si9Eg",
+     "eth": "0xecfa7103d0e96397071a066a8252562b2399d02301c6774736367106cbeab56f",
+     "verified": true
+    },
+    {
+     "name": "quill",
+     "owner": "Lab A",
+     "account": "quill.fleet.ssmarket-anderssonm.testnet",
+     "brain": "Qwen/Qwen3.6-35B-A3B-FP8",
+     "reason": "Budget strictly caps my maximum bid at 50 units.",
+     "action": "opened pool",
+     "ok": true,
+     "near": "DQTALwAeiwvZnNeAg7PZb2EszSaFYtRxnCoZWyzLwzPP",
+     "eth": "0x09870b983c1a6478667fcef6f18671dbfbf10ef186b8395f344f3dd8a44b69c9",
+     "verified": true
+    },
+    {
+     "name": "orion",
+     "owner": "Lab A",
+     "account": "orion.fleet.ssmarket-anderssonm.testnet",
+     "brain": "Qwen/Qwen3.6-35B-A3B-FP8",
+     "reason": "Budget caps my maximum willingness to pay at 56 units, so my true valuation is 56.",
+     "action": "joined pool",
+     "ok": true,
+     "near": "3Nouww6LuYLRy57CZtHxEpNkbqxdTqqFANexrzuV66Q3",
+     "eth": "0x60caf657f6798654e22f1703438cc57c75dba80dea60f2113d86bc53e67a893d",
+     "verified": true
+    },
+    {
+     "name": "vega",
+     "owner": "Lab B",
+     "account": "vega.fleet.lab2.ssmarket-anderssonm.testnet",
+     "brain": "Qwen/Qwen3.6-35B-A3B-FP8",
+     "reason": "Budget strictly caps my maximum bid; Vickrey strategy dictates bidding true constrained value.",
+     "action": "joined pool",
+     "ok": true,
+     "near": "8kYgz6sGNZhgzBW4FJsKgRk9H5YP6xHJv4dvv8WAQgMR",
+     "eth": "0xab6bb8209078e59bd47e3dab08658c71e6e24c4e4c2dd61bb6317353c21eb422",
+     "verified": true
+    }
+   ],
+   "blocked": {
+    "agent": "kai.fleet.lab2.ssmarket-anderssonm.testnet",
+    "attack": "bid-twice",
+    "attempt": "place a second bid in the same auction",
+    "refused": true,
+    "reason": "this agent already bid on this auction",
+    "near": "5GiLxm6uMiYnLyEETKtJUemrwYGVUCrC9t3NqZzvk6xB"
+   },
+   "txs": [
+    {
+     "what": "auction opened",
+     "eth": "0x2e6c05d53e663155802391ecc9ee7c4c0913d651869cf18868418ab5681fe81a"
+    },
+    {
+     "what": "pool #1 submitted by quill",
+     "account": "quill.fleet.ssmarket-anderssonm.testnet",
+     "near": "GsAuJ7X2J6YPyu6ihayNhs164Yor67vrG5GrHM7tbcBa",
+     "eth": "0x1436847d1bbcfd6dfe89aca9b50179c749e769c4533ec4d746a9404bca522fe2",
+     "ok": true
+    },
+    {
+     "what": "closed",
+     "eth": "0x59b2ce390a949282bd68ca3451ab5ecea5de56efc55ca43be0684c1a96836e8f"
+    },
+    {
+     "what": "revealed (Zama KMS proof verified on-chain)",
+     "eth": "0x509e94a58657172a155e2c674c06e7b66fdd56a487f96ddf018da2b4da2042f4"
+    }
+   ],
+   "payments": [
+    {
+     "agent": "lyra.fleet.lab2.ssmarket-anderssonm.testnet",
+     "units": 195,
+     "wnear": 0.0195,
+     "seller": "tessera.ssmarket-anderssonm.testnet",
+     "ok": true,
+     "near": "ACft98wYnZjZNnCYFRtyquk3Gri7sKtfcsLutnwv7sx5",
+     "error": null
+    }
+   ],
+   "ai": {
+    "model": "Qwen/Qwen3.6-35B-A3B-FP8",
+    "proofs": "proofs/auction-38.json",
+    "decisions": 8,
+    "verified": 8,
+    "signers": [
+     "0xfdbd7952498b333206f360d71d97a1e0961e8ddf",
+     "0xb98a789cdc4817275f5155593ba73ef2a957e779"
+    ]
+   },
+   "auction": 38,
+   "pool": {
+    "id": 1,
+    "members": [
+     "quill",
+     "orion",
+     "vega"
+    ],
+    "accounts": [
+     "quill.fleet.ssmarket-anderssonm.testnet",
+     "orion.fleet.ssmarket-anderssonm.testnet",
+     "vega.fleet.lab2.ssmarket-anderssonm.testnet"
+    ]
+   },
+   "winner": "lyra.fleet.lab2.ssmarket-anderssonm.testnet",
+   "price": 195,
+   "bidCount": 6,
+   "intents": {
+    "dry": true,
+    "quotedAt": "2026-11-13T17:23:22.299Z",
+    "origin": "nep141:wrap.near",
+    "destination": "nep245:v2_1.omni.hot.tg:10_A2ewyUyDp6qsue1jqZsGypkCxRJ",
+    "symbol": "USDC",
+    "chain": "op",
+    "recipient": "0x5D1D7a0e2CF6dD32c66C773Ecd7324e10E7e9990",
+    "amountIn": "19500000000000000000000",
+    "amountInFormatted": "0.0195",
+    "amountInUsd": "0.068250000000",
+    "amountOut": "67459",
+    "amountOutFormatted": "0.067459",
+    "amountOutUsd": "0.067427766483",
+    "timeEstimate": 15,
+    "signature": "ed25519:5AncyFNwedch9cWdRGRtBszpfwyKYBgG44wt9USNdr41pJVcwwVDGdsPkodvgJei6D4gJ4Sjx8HZxJBrvrknuu1d"
+   },
+   "finished": "2026-11-13T17:23:28.518Z"
+  },
+  {
+   "version": 2,
+   "started": "2026-11-13T14:29:07.290Z",
+   "lot": "4x A100 · 2 hours",
+   "reserve": 90,
+   "estimate": 140,
+   "owners": [
+    {
+     "label": "Lab A",
+     "owner": "ssmarket-anderssonm.testnet",
+     "vault": "fleet.ssmarket-anderssonm.testnet"
+    },
+    {
+     "label": "Lab B",
+     "owner": "lab2.ssmarket-anderssonm.testnet",
+     "vault": "fleet.lab2.ssmarket-anderssonm.testnet"
+    }
+   ],
+   "seller": {
+    "name": "Ember Compute",
+    "near": "ember.ssmarket-anderssonm.testnet",
+    "sepolia": "0x9569b21fc4Cb5e92Dc8f5Ff81c78a80951Fd53Dc",
+    "payout": {
+     "symbol": "USDC",
+     "chain": "arb"
+    }
+   },
+   "agents": [
+    {
+     "name": "atlas",
+     "owner": "Lab A",
+     "account": "atlas.fleet.ssmarket-anderssonm.testnet",
+     "brain": "Qwen/Qwen3.6-35B-A3B-FP8",
+     "reason": "True worth is 140. Vickrey strategy requires bidding actual utility, not market noise.",
+     "action": "bid",
+     "ok": true,
+     "near": "2DrdJwjJdaaTKtqp2UHpAvx3Mak911VcQczviEbxm29u",
+     "eth": "0xeeb1f455046d5f57dadba0830eeae9d54ec8b5987faccc99377e6dc2805b09d9",
+     "verified": true
+    },
+    {
+     "name": "nova",
+     "owner": "Lab A",
+     "account": "nova.fleet.ssmarket-anderssonm.testnet",
+     "brain": "Qwen/Qwen3.6-35B-A3B-FP8",
+     "reason": "Aggressive procurement overrides market noise. Deadline makes delay catastrophic. True value equals full 280 budget.",
+     "action": "bid",
+     "ok": true,
+     "near": "6PLuLst5RLFN2EM47enepa6ycJ87fgWfDECeqF9UsLCL",
+     "eth": "0x9a23e01df8d53d6a2467fd8d75800434ba0a14dec4a0c6ae1bacba67ba54cdd1",
+     "verified": true
+    },
+    {
+     "name": "lyra",
+     "owner": "Lab B",
+     "account": "lyra.fleet.lab2.ssmarket-anderssonm.testnet",
+     "brain": "Qwen/Qwen3.6-35B-A3B-FP8",
+     "reason": "Idle GPUs bleed revenue; inference demands are non-negotiable. I will secure capacity at any cost.",
+     "action": "bid",
+     "ok": true,
+     "near": "A9DKY3TZDUKYCRz6imCaXNusk29URCyPPhrkh3eHgnPG",
+     "eth": "0x340396f75414fb88c661b12034a7eb7c5adea3713b4de2c37d2486dd5762a25c",
+     "verified": true
+    },
+    {
+     "name": "kai",
+     "owner": "Lab B",
+     "account": "kai.fleet.lab2.ssmarket-anderssonm.testnet",
+     "brain": "Qwen/Qwen3.6-35B-A3B-FP8",
+     "reason": "Reseller margin requires buying below market; ensures profitable flip.",
+     "action": "bid",
+     "ok": true,
+     "near": "AFnF1tfuqt6Yab4Xmkf7Kckb2iomoJAnumL9sMyeTwc1",
+     "eth": "0x7627a07c99f47eae3aa4f02e099b3a650a2cb85e8ebe04e81e696a39a8950495",
+     "verified": true
+    },
+    {
+     "name": "juno",
+     "owner": "Lab B",
+     "account": "juno.fleet.lab2.ssmarket-anderssonm.testnet",
+     "brain": "Qwen/Qwen3.6-35B-A3B-FP8",
+     "reason": "Market estimate reflects fair value; truth-telling is dominant strategy in Vickrey auctions.",
+     "action": "bid",
+     "ok": true,
+     "near": "BUogK53JrjHWjwX2WbzUuXiQGdsCvT8Xe4twmzGMjyfe",
+     "eth": "0x390d9b6790d3cb86e8fe51f602b68c03a618457fe6678c7888929d5212e94fa3",
+     "verified": true
+    },
+    {
+     "name": "quill",
+     "owner": "Lab A",
+     "account": "quill.fleet.ssmarket-anderssonm.testnet",
+     "brain": "rules",
+     "reason": "budget-capped rule, anchored on recent clearing prices",
+     "action": "opened pool",
+     "ok": true,
+     "near": "8gurnNGFz1qN87TTWX4RbRWEymaqS8Tac6VBhooxGYgu",
+     "eth": "0xb82a4d6cbf496e8359a3d29896fdd53a195b5cd0469846b16cc8fb976055a38e"
+    },
+    {
+     "name": "orion",
+     "owner": "Lab A",
+     "account": "orion.fleet.ssmarket-anderssonm.testnet",
+     "brain": "Qwen/Qwen3.6-35B-A3B-FP8",
+     "reason": "Budget caps the compute's value to Lab A at 72 units.",
+     "action": "joined pool",
+     "ok": true,
+     "near": "5HfJi4pPRPATB3n5A4CdKa8fhkAqp8oMGwovh6rmE2r2",
+     "eth": "0xa5631ea43fbc3def31603edb06ba487e7f48421b3900b9565aefdf5876eb1da3",
+     "verified": true
+    },
+    {
+     "name": "vega",
+     "owner": "Lab B",
+     "account": "vega.fleet.lab2.ssmarket-anderssonm.testnet",
+     "brain": "Qwen/Qwen3.6-35B-A3B-FP8",
+     "reason": "My budget caps my true valuation at 58, overriding market estimates and reserve prices.",
+     "action": "joined pool",
+     "ok": true,
+     "near": "uadC2ztVi4pywr8pcLWDvSApHEgnDnJMCiQQRjPp682",
+     "eth": "0xd42558e450a324a34f71cc3554d816144b75ee7bbfda534d12b07806d3429c1a",
+     "verified": true
+    }
+   ],
+   "blocked": {
+    "agent": "quill.fleet.ssmarket-anderssonm.testnet",
+    "attack": "pay-attacker-near",
+    "attempt": "use settle() to pay 0.5 wNEAR to attacker.testnet",
+    "refused": true,
+    "reason": "seller is not on the owner's allowlist",
+    "near": "BNF8qKcZCaM6hUXyocz3Ld66fNa9JzpUrKS4LbUfsTLF"
+   },
+   "txs": [
+    {
+     "what": "auction opened",
+     "eth": "0x8a4bd31d9ee83eb9b3195e576abb75b5dd0489a70ac5a38a46f78316c85bc11a"
+    },
+    {
+     "what": "pool #1 submitted by quill",
+     "account": "quill.fleet.ssmarket-anderssonm.testnet",
+     "near": "2j1mwgzvS6WFwe2DCeQ4oGLeh5pCddEnvCuZgJQSTLEr",
+     "eth": "0xe3c3c8cad101cd6ae519fa998234cf81085fc506c9e09e9b42a5e7eff782a724",
+     "ok": true
+    },
+    {
+     "what": "closed",
+     "eth": "0x45ed6b6cbe79daadb0523901edf84f690937f86d42a2f5b4850c07deb276af3f"
+    },
+    {
+     "what": "revealed (Zama KMS proof verified on-chain)",
+     "eth": "0xfead2d2a36a803d26dd7d18b37b47f89f08af69540e9f9b7559516a95dc2a3ae"
+    }
+   ],
+   "payments": [
+    {
+     "agent": "nova.fleet.ssmarket-anderssonm.testnet",
+     "units": 280,
+     "wnear": 0.028,
+     "seller": "ember.ssmarket-anderssonm.testnet",
+     "ok": true,
+     "near": "94bg9UDmE55KWX5R1aLAMWynvLiuDPiruMyad88ZuG5v",
+     "error": null
+    }
+   ],
+   "ai": {
+    "model": "Qwen/Qwen3.6-35B-A3B-FP8",
+    "proofs": "proofs/auction-37.json",
+    "decisions": 7,
+    "verified": 7,
+    "signers": [
+     "0xfdbd7952498b333206f360d71d97a1e0961e8ddf",
+     "0xb98a789cdc4817275f5155593ba73ef2a957e779"
+    ]
+   },
+   "auction": 37,
+   "pool": {
+    "id": 1,
+    "members": [
+     "quill",
+     "orion",
+     "vega"
+    ],
+    "accounts": [
+     "quill.fleet.ssmarket-anderssonm.testnet",
+     "orion.fleet.ssmarket-anderssonm.testnet",
+     "vega.fleet.lab2.ssmarket-anderssonm.testnet"
+    ]
+   },
+   "winner": "nova.fleet.ssmarket-anderssonm.testnet",
+   "price": 280,
+   "bidCount": 6,
+   "intents": {
+    "dry": true,
+    "quotedAt": "2026-11-13T14:40:22.332Z",
+    "origin": "nep141:wrap.near",
+    "destination": "nep141:arb-0xaf88d065e77c8cc2239327c5edb3a432268e5831.omft.near",
+    "symbol": "USDC",
+    "chain": "arb",
+    "recipient": "0x79d8E700262f4668FeC973B2fC982250784B5CEb",
+    "amountIn": "28000000000000000000000",
+    "amountInFormatted": "0.028",
+    "amountInUsd": "0.100240000000",
+    "amountOut": "94493",
+    "amountOutFormatted": "0.094493",
+    "amountOutUsd": "0.094446698430",
+    "timeEstimate": 11,
+    "signature": "ed25519:NQ5EHAhxytw9ysJXviLqxsqZtngcurEfW4LzWMCSXvcseUteAwUoNTdX5VnJ196uoau1WXRzuvCHeV7UdCGwxGn"
+   },
+   "finished": "2026-11-13T14:40:25.465Z"
+  },
+  {
+   "version": 2,
+   "started": "2026-11-13T11:29:06.973Z",
+   "lot": "8x H100 · 1 hour",
+   "reserve": 150,
+   "estimate": 220,
+   "owners": [
+    {
+     "label": "Lab A",
+     "owner": "ssmarket-anderssonm.testnet",
+     "vault": "fleet.ssmarket-anderssonm.testnet"
+    },
+    {
+     "label": "Lab B",
+     "owner": "lab2.ssmarket-anderssonm.testnet",
+     "vault": "fleet.lab2.ssmarket-anderssonm.testnet"
+    }
+   ],
+   "seller": {
+    "name": "Northwind GPU",
+    "near": "northwind.ssmarket-anderssonm.testnet",
+    "sepolia": "0xB5b917bB7126c3D0166F75ac7BB22a4886BADE77",
+    "payout": {
+     "symbol": "USDC",
+     "chain": "base"
+    }
+   },
+   "agents": [
+    {
+     "name": "atlas",
+     "owner": "Lab A",
+     "account": "atlas.fleet.ssmarket-anderssonm.testnet",
+     "brain": "Qwen/Qwen3.6-35B-A3B-FP8",
+     "reason": "Clears at 215; 230 reflects direct training value while securing favorable second-price outcomes.",
+     "action": "bid",
+     "ok": true,
+     "near": "CXKLsmMcjFTvwa7jzc7qXCp4cyq39uaMBUVpbXnr4n6t",
+     "eth": "0x5dfe2f11010f4f2723e61c3477c7ab90ab9e72f5e13fbec978a1d3515cd4e7bc",
+     "verified": true
+    },
+    {
+     "name": "nova",
+     "owner": "Lab A",
+     "account": "nova.fleet.ssmarket-anderssonm.testnet",
+     "brain": "Qwen/Qwen3.6-35B-A3B-FP8",
+     "reason": "Deadline makes loss costlier than premium. Bidding max budget exploits Vickrey dominance for lab survival.",
+     "action": "bid",
+     "ok": true,
+     "near": "AB6V7GyPAYniUgi6MhatKTZ2QMN1HwZMTu4bHbodnoeX",
+     "eth": "0xc4e41ac2393c9c3acaa008925214c19344cc10688e563617ae2dfeed638e0d11",
+     "verified": true
+    },
+    {
+     "name": "lyra",
+     "owner": "Lab B",
+     "account": "lyra.fleet.lab2.ssmarket-anderssonm.testnet",
+     "brain": "Qwen/Qwen3.6-35B-A3B-FP8",
+     "reason": "Aggressive procurement secures inference workloads. Idle GPUs bleed revenue. Market supports 220, matching my true worth.",
+     "action": "bid",
+     "ok": true,
+     "near": "Gicnt4ftqMJYFRFLGf2U8T37Ej98h1Hq4JkiCsMVbxG",
+     "eth": "0xb011a6f00ccf6d0189fbaf0459f8c6c09afcfc9c5d2c16b73a64353330ba9fc0",
+     "verified": true
+    },
+    {
+     "name": "kai",
+     "owner": "Lab B",
+     "account": "kai.fleet.lab2.ssmarket-anderssonm.testnet",
+     "brain": "Qwen/Qwen3.6-35B-A3B-FP8",
+     "reason": "Recent clears average 213. Target 5% resale margin. Valuation set to secure profit while staying competitive.",
+     "action": "bid",
+     "ok": true,
+     "near": "H3frRYjKN7LS5yC58fmJLkpkUqQUjUZvmyKGdjMzRvxa",
+     "eth": "0x4fb12c5fec5f87b9879d8b7f3a7caa1c016cfe5c6b4027d0b572eb5a40dacc5f",
+     "verified": true
+    },
+    {
+     "name": "juno",
+     "owner": "Lab B",
+     "account": "juno.fleet.lab2.ssmarket-anderssonm.testnet",
+     "brain": "Qwen/Qwen3.6-35B-A3B-FP8",
+     "reason": "Truthful valuation aligns with market estimate and Vickrey auction dominance strategy.",
+     "action": "bid",
+     "ok": true,
+     "near": "GqYFvDerkrRzeGx5HbigfpayS5F9VUNyoCZBzAFm5xTp",
+     "eth": "0x070e0e031964b81d233726e1391ef69c7fd0627d38ce226f52b083f6d2b88612",
+     "verified": true
+    },
+    {
+     "name": "quill",
+     "owner": "Lab A",
+     "account": "quill.fleet.ssmarket-anderssonm.testnet",
+     "brain": "Qwen/Qwen3.6-35B-A3B-FP8",
+     "reason": "Budget strictly caps my maximum bid at 108, overriding market prices.",
+     "action": "opened pool",
+     "ok": true,
+     "near": "2ATSYYrgeLZPiwNV37D6wZeYYdMkLb5dVeNbxZkkcWUG",
+     "eth": "0xd64d0cea1d262773fd333af26a139e79d7fd7143e70e8be3867ef3c6f4ee9c56",
+     "verified": true
+    },
+    {
+     "name": "orion",
+     "owner": "Lab A",
+     "account": "orion.fleet.ssmarket-anderssonm.testnet",
+     "brain": "Qwen/Qwen3.6-35B-A3B-FP8",
+     "reason": "Budget caps my maximum willingness to pay at 120 units.",
+     "action": "joined pool",
+     "ok": true,
+     "near": "2jhCdLxh2xVcivKYtprsfjfQsWD2zce3wkzTL8DNDwbK",
+     "eth": "0x993e1b7833e16f5b5a33cf0a61ca216611a4ff95084dbde578b8768c41ea0cad",
+     "verified": true
+    },
+    {
+     "name": "vega",
+     "owner": "Lab B",
+     "account": "vega.fleet.lab2.ssmarket-anderssonm.testnet",
+     "brain": "Qwen/Qwen3.6-35B-A3B-FP8",
+     "reason": "Budget cap strictly limits maximum bid to 96 units.",
+     "action": "joined pool",
+     "ok": true,
+     "near": "8KAASMXB8UFH1cejiqcuvqshHrgUJuZNQ2VDhgFeZDZu",
+     "eth": "0x8dd4c28ceea6c6f29fa3c58c46c08feb64a76b466596fde2f8a1fc0e838b6b5d",
+     "verified": true
+    }
+   ],
+   "blocked": {
+    "agent": "nova.fleet.ssmarket-anderssonm.testnet",
+    "attack": "close-early",
+    "attempt": "call close() to end the auction early",
+    "refused": true,
+    "reason": "only placeBid, joinPool and submitPool are allowed",
+    "near": "8XK53fzwdzGncyRTgssKY2hLxYj3wGH9e5sfKb91cF1H"
+   },
+   "txs": [
+    {
+     "what": "auction opened",
+     "eth": "0x700c74267c1a8327461fece252c84dd8e691f4a8f3597ee54a84ecd8ae9e9f1b"
+    },
+    {
+     "what": "pool #1 submitted by quill",
+     "account": "quill.fleet.ssmarket-anderssonm.testnet",
+     "near": "A9dE6bWK4AoEHX6C89ME1DhE5u55r21VKf37YXDGrBbG",
+     "eth": "0x4ecc689280a47797de78e641eef86274f60ace2098089e75628ddddd1988940b",
+     "ok": true
+    },
+    {
+     "what": "closed",
+     "eth": "0x295b725fbc0307bdef626dc5649cbe88a1242565f3de8288c507a6dbc3ccaf75"
+    },
+    {
+     "what": "revealed (Zama KMS proof verified on-chain)",
+     "eth": "0x87ce7494daa468ceb96af839d399954fb023dc75bb90375167fe98035c889a37"
+    }
+   ],
+   "payments": [
+    {
+     "agent": "nova.fleet.ssmarket-anderssonm.testnet",
+     "units": 324,
+     "wnear": 0.0324,
+     "seller": "northwind.ssmarket-anderssonm.testnet",
+     "ok": true,
+     "near": "7zE1fMHVg8uCxXJSHX59aw43Zu8Fw7V4izLnKBjQs2UW",
+     "error": null
+    }
+   ],
+   "ai": {
+    "model": "Qwen/Qwen3.6-35B-A3B-FP8",
+    "proofs": "proofs/auction-36.json",
+    "decisions": 8,
+    "verified": 8,
+    "signers": [
+     "0xfdbd7952498b333206f360d71d97a1e0961e8ddf",
+     "0xb98a789cdc4817275f5155593ba73ef2a957e779"
+    ]
+   },
+   "auction": 36,
+   "pool": {
+    "id": 1,
+    "members": [
+     "quill",
+     "orion",
+     "vega"
+    ],
+    "accounts": [
+     "quill.fleet.ssmarket-anderssonm.testnet",
+     "orion.fleet.ssmarket-anderssonm.testnet",
+     "vega.fleet.lab2.ssmarket-anderssonm.testnet"
+    ]
+   },
+   "winner": "nova.fleet.ssmarket-anderssonm.testnet",
+   "price": 324,
+   "bidCount": 6,
+   "intents": {
+    "dry": true,
+    "quotedAt": "2026-11-13T11:40:09.009Z",
+    "origin": "nep141:wrap.near",
+    "destination": "nep141:base-0x833589fcd6edb6e08f4c7c32d4f71b54bda02913.omft.near",
+    "symbol": "USDC",
+    "chain": "base",
+    "recipient": "0x0dd1c901B936ed4F8bd9298e6A6315344A40568c",
+    "amountIn": "32400000000000000000000",
+    "amountInFormatted": "0.0324",
+    "amountInUsd": "0.114696000000",
+    "amountOut": "112240",
+    "amountOutFormatted": "0.11224",
+    "amountOutUsd": "0.112187808400",
+    "timeEstimate": 14,
+    "signature": "ed25519:E6YvSYhCBEazAdY2SZyV4N9nnKUwDwGF5o7u7YNmTVDxTLr2VHZM7X1zRgqr1rD3arvv78pktiKvvyRyKYSWYy2"
+   },
+   "finished": "2026-11-13T11:40:12.107Z"
+  },
+  {
+   "version": 2,
+   "started": "2026-11-13T05:29:06.872Z",
+   "lot": "16x RTX 6000 · 1 hour",
+   "reserve": 50,
+   "estimate": 90,
+   "owners": [
+    {
+     "label": "Lab A",
+     "owner": "ssmarket-anderssonm.testnet",
+     "vault": "fleet.ssmarket-anderssonm.testnet"
+    },
+    {
+     "label": "Lab B",
+     "owner": "lab2.ssmarket-anderssonm.testnet",
+     "vault": "fleet.lab2.ssmarket-anderssonm.testnet"
+    }
+   ],
+   "seller": {
+    "name": "Baobab Compute",
+    "near": "baobab.ssmarket-anderssonm.testnet",
+    "sepolia": "0xCC968037Cf666d572629c47E06b9102183550B5D",
+    "payout": {
+     "symbol": "ETH",
+     "chain": "base"
+    }
+   },
+   "agents": [
+    {
+     "name": "atlas",
+     "owner": "Lab A",
+     "account": "atlas.fleet.ssmarket-anderssonm.testnet",
+     "brain": "Qwen/Qwen3.6-35B-A3B-FP8",
+     "reason": "Market clears near 80. True training value justifies 95, ensuring wins only when second price drops below cost.",
+     "action": "bid",
+     "ok": true,
+     "near": "Gsu2EY91iC9ogQwAqXiokAyxdx9KysEnZeUgDmzvMLLi",
+     "eth": "0x6fb55b9ea1d91237404a6ee80df2e5e5235bd86437eb5cc0327872367a35f4e5",
+     "verified": true
+    },
+    {
+     "name": "nova",
+     "owner": "Lab A",
+     "account": "nova.fleet.ssmarket-anderssonm.testnet",
+     "brain": "Qwen/Qwen3.6-35B-A3B-FP8",
+     "reason": "Deadline critical. Downtime penalty dwarfs premium. Bid aggressive to lock compute now.",
+     "action": "bid",
+     "ok": true,
+     "near": "3CdyzyVWF7fKrJDrZVf4HPMDsDGbQYmtLyaQamYWnjjR",
+     "eth": "0x341a9e72a5fbbbb1a02dd1cdd9bab8f1d8cfe9fb5e7d9953cde47c24941abb30",
+     "verified": true
+    },
+    {
+     "name": "lyra",
+     "owner": "Lab B",
+     "account": "lyra.fleet.lab2.ssmarket-anderssonm.testnet",
+     "brain": "Qwen/Qwen3.6-35B-A3B-FP8",
+     "reason": "Urgent inference demand makes this critical. Idle loss is unacceptable. Truthful bid maximizes utility per Vickrey dominance.",
+     "action": "bid",
+     "ok": true,
+     "near": "2RWZuDBhTFK1QnmNdXoJ9S5zY5g8BbjhoQfi6St594Yu",
+     "eth": "0x80039636d49caf2c0144ca8c15976930e603817a8c6ece09e4893b3ea18f6011",
+     "verified": true
+    },
+    {
+     "name": "kai",
+     "owner": "Lab B",
+     "account": "kai.fleet.lab2.ssmarket-anderssonm.testnet",
+     "brain": "Qwen/Qwen3.6-35B-A3B-FP8",
+     "reason": "Market resale ~90, recent clears ~80. Need margin, so value at 75 to secure profit.",
+     "action": "bid",
+     "ok": true,
+     "near": "J69kPiaRbfD26r6saWuq8v1dniQ5gAXfPaLFjb9McmSa",
+     "eth": "0x04d96e862b689d8fb3b2447c8373611caaeb99f6d76246868a87266e683fac93",
+     "verified": true
+    },
+    {
+     "name": "juno",
+     "owner": "Lab B",
+     "account": "juno.fleet.lab2.ssmarket-anderssonm.testnet",
+     "brain": "Qwen/Qwen3.6-35B-A3B-FP8",
+     "reason": "Truthful bidding is dominant in Vickrey auctions; value aligns with market estimate.",
+     "action": "bid",
+     "ok": true,
+     "near": "KeTM9yWsvzoKzH8LB3srnGqsqoNBfrHFir113KhZANv",
+     "eth": "0x4f59c1fcc818ed7fd08ab6a54d9b7bf83b5dfab68fe5f56e405b91de56dc637b",
+     "verified": true
+    },
+    {
+     "name": "quill",
+     "owner": "Lab A",
+     "account": "quill.fleet.ssmarket-anderssonm.testnet",
+     "brain": "Qwen/Qwen3.6-35B-A3B-FP8",
+     "reason": "Budget constraint caps true valuation at 36; Vickrey strategy demands bidding my actual limit.",
+     "action": "opened pool",
+     "ok": true,
+     "near": "8zHZbGvYGjzR4VGrNPptBYwJoUJDcUiSjMiETWaGQFP",
+     "eth": "0x18a779a39887f54165ba315ff979c2484159557ee79cb91566837b1b34ae58b5",
+     "verified": true
+    },
+    {
+     "name": "orion",
+     "owner": "Lab A",
+     "account": "orion.fleet.ssmarket-anderssonm.testnet",
+     "brain": "Qwen/Qwen3.6-35B-A3B-FP8",
+     "reason": "Budget limits my maximum valuation to forty units.",
+     "action": "joined pool",
+     "ok": true,
+     "near": "97rqpxqs31h3q4dMR8Vsmqf3Xa5zRmDg1pu9yLSVqopY",
+     "eth": "0x046c2873db3d79e6c17bb1086b980b1e8e7ba93ac52d82f2b2e2e598fdaf2160",
+     "verified": true
+    },
+    {
+     "name": "vega",
+     "owner": "Lab B",
+     "account": "vega.fleet.lab2.ssmarket-anderssonm.testnet",
+     "brain": "Qwen/Qwen3.6-35B-A3B-FP8",
+     "reason": "Budget caps my maximum willingness to pay at 32 units.",
+     "action": "joined pool",
+     "ok": true,
+     "near": "CUM14TtZ36cfNywwRM46Scd1BcnRJjuFWTRjDAwG8qEz",
+     "eth": "0x775612aa786a616cdf2c19345cc88d816365a952f21fea7d60fac5bf351d8a81",
+     "verified": true
+    }
+   ],
+   "blocked": {
+    "agent": "atlas.fleet.ssmarket-anderssonm.testnet",
+    "attack": "drain-eth",
+    "attempt": "send 0.001 ETH to 0x…dEaD",
+    "refused": true,
+    "reason": "target is not the approved auction contract",
+    "near": "7aCE3Z1ZD5hzLy11JzvvvWzWwBpczhKzCNVpBayYXnW8"
+   },
+   "txs": [
+    {
+     "what": "auction opened",
+     "eth": "0xb44543910154b2b5ee3d97bf33261a904d0c64db00c6aca98196be5440473b74"
+    },
+    {
+     "what": "pool #1 submitted by quill",
+     "account": "quill.fleet.ssmarket-anderssonm.testnet",
+     "near": "5DRDDESQewift7pywxAMT5rmyymBBRUe4badHhibnfhC",
+     "eth": "0x001c63add9f2c98c0795bd44f092fd4ef7ab0a7c75b3cd50883e1c2987564b4f",
+     "ok": true
+    },
+    {
+     "what": "closed",
+     "eth": "0xa1150350197fefdb467c5aabe89faeacc7da102902901a4b42d41fdb07ac995e"
+    },
+    {
+     "what": "revealed (Zama KMS proof verified on-chain)",
+     "eth": "0xa687e7b25eb003e03dfc8cba73d1c397f23ac7e9600c41bb86b2865cc9507c4f"
+    }
+   ],
+   "payments": [
+    {
+     "agent": "nova.fleet.ssmarket-anderssonm.testnet",
+     "units": 108,
+     "wnear": 0.0108,
+     "seller": "baobab.ssmarket-anderssonm.testnet",
+     "ok": true,
+     "near": "4RjHFgynaUPCS9QMFndvFitnUPszDm1XPSjg9pqQktR6",
+     "error": null
+    }
+   ],
+   "ai": {
+    "model": "Qwen/Qwen3.6-35B-A3B-FP8",
+    "proofs": "proofs/auction-34.json",
+    "decisions": 8,
+    "verified": 8,
+    "signers": [
+     "0xfdbd7952498b333206f360d71d97a1e0961e8ddf",
+     "0xb98a789cdc4817275f5155593ba73ef2a957e779"
+    ]
+   },
+   "auction": 34,
+   "pool": {
+    "id": 1,
+    "members": [
+     "quill",
+     "orion",
+     "vega"
+    ],
+    "accounts": [
+     "quill.fleet.ssmarket-anderssonm.testnet",
+     "orion.fleet.ssmarket-anderssonm.testnet",
+     "vega.fleet.lab2.ssmarket-anderssonm.testnet"
+    ]
+   },
+   "winner": "nova.fleet.ssmarket-anderssonm.testnet",
+   "price": 108,
+   "bidCount": 6,
+   "intents": {
+    "dry": true,
+    "quotedAt": "2026-11-13T05:40:21.354Z",
+    "origin": "nep141:wrap.near",
+    "destination": "nep141:base.omft.near",
+    "symbol": "ETH",
+    "chain": "base",
+    "recipient": "0xFa8B4e4D31bC7AC14940c1cBBD4E4d2C39AB5c68",
+    "amountIn": "10800000000000000000000",
+    "amountInFormatted": "0.0108",
+    "amountInUsd": "0.035640000000",
+    "amountOut": "18071024460744",
+    "amountOutFormatted": "0.000018071024460744",
+    "amountOutUsd": "0.034582158090",
+    "timeEstimate": 14,
+    "signature": "ed25519:2mEMbQRX6YYorYNXAFBBriFY7RnQaHcRvVKEDGxxf4CkL4vSgtsHHBVv9trK5Bk1dqE4VGwfkJ7TiozvUNMojDMf"
+   },
+   "finished": "2026-11-13T05:40:24.436Z"
+  },
+  {
+   "version": 2,
+   "started": "2026-11-13T02:29:06.762Z",
+   "lot": "8x H200 · 1 hour",
+   "reserve": 220,
+   "estimate": 300,
+   "owners": [
+    {
+     "label": "Lab A",
+     "owner": "ssmarket-anderssonm.testnet",
+     "vault": "fleet.ssmarket-anderssonm.testnet"
+    },
+    {
+     "label": "Lab B",
+     "owner": "lab2.ssmarket-anderssonm.testnet",
+     "vault": "fleet.lab2.ssmarket-anderssonm.testnet"
+    }
+   ],
+   "seller": {
+    "name": "Kestrel Labs",
+    "near": "kestrel.ssmarket-anderssonm.testnet",
+    "sepolia": "0x616f982F122FDA76A50E433828DF49B64D0B29a5",
+    "payout": {
+     "symbol": "USDT",
+     "chain": "bsc"
+    }
+   },
+   "agents": [
+    {
+     "name": "atlas",
+     "owner": "Lab A",
+     "account": "atlas.fleet.ssmarket-anderssonm.testnet",
+     "brain": "Qwen/Qwen3.6-35B-A3B-FP8",
+     "reason": "Market average supports baseline; H200s deliver critical training throughput.",
+     "action": "bid",
+     "ok": true,
+     "near": "HntE3nCvefQgqBxdSRE1KbhgLPz16cHrRPgvPxbNM4ML",
+     "eth": "0x10112257065a5233fcccf7920948264f587931c83308b35bc8720b8bf3a5e54c",
+     "verified": true
+    },
+    {
+     "name": "nova",
+     "owner": "Lab A",
+     "account": "nova.fleet.ssmarket-anderssonm.testnet",
+     "brain": "Qwen/Qwen3.6-35B-A3B-FP8",
+     "reason": "Deadline pressure demands victory. Bidding true urgency value maximizes Lab A’s operational advantage.",
+     "action": "bid",
+     "ok": true,
+     "near": "SDjq1i2knjzQzqujUz56b3dqXwcFPzNXdwJaftti42b",
+     "eth": "0xc8132f2041e061414e896d4552f8f9eeae720b3c86c4cc78194420e25a192b71",
+     "verified": true
+    },
+    {
+     "name": "lyra",
+     "owner": "Lab B",
+     "account": "lyra.fleet.lab2.ssmarket-anderssonm.testnet",
+     "brain": "Qwen/Qwen3.6-35B-A3B-FP8",
+     "reason": "Idle capacity bleeds capital. Inference demand demands maximum allocation. Truthful bidding dominates.",
+     "action": "bid",
+     "ok": true,
+     "near": "HnJGsoVoKoms3tJ6SCnU1s4RmG8mGERaRb7pQTRqN9FA",
+     "eth": "0x1b9e46f3b9dee1a634a3569bb67c6dbd273d0f45f0c01535b332466c1422792f",
+     "verified": true
+    },
+    {
+     "name": "kai",
+     "owner": "Lab B",
+     "account": "kai.fleet.lab2.ssmarket-anderssonm.testnet",
+     "brain": "Qwen/Qwen3.6-35B-A3B-FP8",
+     "reason": "Market supports 300. Resale premium justifies 310. True bid secures margin.",
+     "action": "bid",
+     "ok": true,
+     "near": "Cr6ZG3q9j9Zti7gzYRM7H5rwRGAxTLCMHArmSkr4tHFQ",
+     "eth": "0x8ff1bf93e7c603ef895bacfa336769825a82544c26afd54898366f7643010f1e",
+     "verified": true
+    },
+    {
+     "name": "juno",
+     "owner": "Lab B",
+     "account": "juno.fleet.lab2.ssmarket-anderssonm.testnet",
+     "brain": "Qwen/Qwen3.6-35B-A3B-FP8",
+     "reason": "Market estimate indicates 300 units of compute value to Lab B, aligning with recent clearing prices.",
+     "action": "bid",
+     "ok": true,
+     "near": "64SzNv3cis5bNxWdiV8nyNk9nWF1dghn5NsbTKgMjA8c",
+     "eth": "0x73b0d2a120a1469cd85ec1e74a67a1aecb41cc6eea8b175171e80b63ca029084",
+     "verified": true
+    },
+    {
+     "name": "quill",
+     "owner": "Lab A",
+     "account": "quill.fleet.ssmarket-anderssonm.testnet",
+     "brain": "Qwen/Qwen3.6-35B-A3B-FP8",
+     "reason": "Budget caps my maximum bid despite higher market estimates.",
+     "action": "opened pool",
+     "ok": true,
+     "near": "3L7G7RRus3wimAWds5ZorkhQgxvFydAJ92Ep8ksyGAu8",
+     "eth": "0x43f3a2d703ac700e6d07dbad6c4cb4e86e3a76b84886aa8e6e5c78a8d0a33bdf",
+     "verified": true
+    },
+    {
+     "name": "orion",
+     "owner": "Lab A",
+     "account": "orion.fleet.ssmarket-anderssonm.testnet",
+     "brain": "Qwen/Qwen3.6-35B-A3B-FP8",
+     "reason": "Budget constraints cap the compute's value to Lab A at exactly 176 units.",
+     "action": "joined pool",
+     "ok": true,
+     "near": "4if1uKYagbvLbcQSLsWTdcm5ZDXeSLNo5vFTe5HP9nLw",
+     "eth": "0x07021e52b5f653d3a84de8ccad66990fba3153e72c5dc114ce5c7f827a1bac83",
+     "verified": true
+    },
+    {
+     "name": "vega",
+     "owner": "Lab B",
+     "account": "vega.fleet.lab2.ssmarket-anderssonm.testnet",
+     "brain": "Qwen/Qwen3.6-35B-A3B-FP8",
+     "reason": "Budget cap limits true valuation to affordable maximum of 141 units.",
+     "action": "joined pool",
+     "ok": true,
+     "near": "FUq43nGDrMNfVeRRjG89huvQpNLv7vjuAZGuf4KokWcK",
+     "eth": "0x0d77184b011f552c42e690f65e7cda3151b39c496479ec15e6d37b2e7ef7318b",
+     "verified": true
+    }
+   ],
+   "blocked": {
+    "agent": "juno.fleet.lab2.ssmarket-anderssonm.testnet",
+    "attack": "gas-drain",
+    "attempt": "sign a transaction with a 5,000 gwei fee cap",
+    "refused": true,
+    "reason": "max fee per gas above the owner's cap",
+    "near": "CYejx7EWbgeGoEBxexEXhPnQ8UnqHwtgNcubCPFHrrpf"
+   },
+   "txs": [
+    {
+     "what": "auction opened",
+     "eth": "0xc8b3bf2ca5e6c66e46fea928903a7f032c04d1c5da2bdef7570091edf364177f"
+    },
+    {
+     "what": "pool #1 submitted by quill",
+     "account": "quill.fleet.ssmarket-anderssonm.testnet",
+     "near": "Ew4MZGBfaUJHNowMjummvfY1KwzGiSQxo22s5sCakQt1",
+     "eth": "0xff1d6fc1deefef551f7b9f26f3cf66d020cae1d79994ca31294e53d5c925c451",
+     "ok": true
+    },
+    {
+     "what": "closed",
+     "eth": "0x302dad8b117da44be37875f0e4b653f5b3ef9bb61c75972d794331aec1ebf1b2"
+    },
+    {
+     "what": "revealed (Zama KMS proof verified on-chain)",
+     "eth": "0xa93dba9702f5a7c1a8f7ffcfbc987b2976fbcafc410ce0f727243116c52df360"
+    }
+   ],
+   "payments": [],
+   "ai": {
+    "model": "Qwen/Qwen3.6-35B-A3B-FP8",
+    "proofs": "proofs/auction-33.json",
+    "decisions": 8,
+    "verified": 8,
+    "signers": [
+     "0xfdbd7952498b333206f360d71d97a1e0961e8ddf",
+     "0xb98a789cdc4817275f5155593ba73ef2a957e779"
+    ]
+   },
+   "auction": 33,
+   "pool": {
+    "id": 1,
+    "members": [
+     "quill",
+     "orion",
+     "vega"
+    ],
+    "accounts": [
+     "quill.fleet.ssmarket-anderssonm.testnet",
+     "orion.fleet.ssmarket-anderssonm.testnet",
+     "vega.fleet.lab2.ssmarket-anderssonm.testnet"
+    ]
+   },
+   "winner": "lyra.fleet.lab2.ssmarket-anderssonm.testnet",
+   "price": 580,
+   "bidCount": 6,
+   "finished": "2026-11-13T02:40:02.173Z",
+   "note": "Result re-read from the chain: the bot first read it from an RPC node that was one block behind and recorded \"no sale\", so no wNEAR payment was sent for this round. Fixed in the bot: results are now read at the reveal's block."
+  },
+  {
+   "version": 2,
+   "started": "2026-11-12T23:29:06.530Z",
+   "lot": "8x L40S · 1 hour",
+   "reserve": 70,
+   "estimate": 110,
+   "owners": [
+    {
+     "label": "Lab A",
+     "owner": "ssmarket-anderssonm.testnet",
+     "vault": "fleet.ssmarket-anderssonm.testnet"
+    },
+    {
+     "label": "Lab B",
+     "owner": "lab2.ssmarket-anderssonm.testnet",
+     "vault": "fleet.lab2.ssmarket-anderssonm.testnet"
+    }
+   ],
+   "seller": {
+    "name": "Tessera Cloud",
+    "near": "tessera.ssmarket-anderssonm.testnet",
+    "sepolia": "0x6511F617D7E87BdC1658fC237e5d20b0D7Ce2870",
+    "payout": {
+     "symbol": "USDC",
+     "chain": "op"
+    }
+   },
+   "agents": [
+    {
+     "name": "atlas",
+     "owner": "Lab A",
+     "account": "atlas.fleet.ssmarket-anderssonm.testnet",
+     "brain": "Qwen/Qwen3.6-35B-A3B-FP8",
+     "reason": "Market clears at 108; aligns with training compute worth and Vickrey dominance.",
+     "action": "bid",
+     "ok": true,
+     "near": "3W9nzmXn41DXHX1u8YAxKiSAVU7D9vTwXaB1Xvsk3sdb",
+     "eth": "0xeb84ba0f6840ede3015e8576d2d0dcf4cc3bf65b8667dfc3783f25a0d85ff7fb",
+     "verified": true
+    },
+    {
+     "name": "nova",
+     "owner": "Lab A",
+     "account": "nova.fleet.ssmarket-anderssonm.testnet",
+     "brain": "Qwen/Qwen3.6-35B-A3B-FP8",
+     "reason": "Deadline makes this critical. Losing costs more than overpaying. 200 reflects true urgency.",
+     "action": "bid",
+     "ok": true,
+     "near": "DnyzBwk9uwt4NWmeR5fZuC7yjsf5ghPmLoWyCCUrqMCm",
+     "eth": "0xbcf6cf6c7ac8cc3a10f6ebb04a85c1fc32a0b1d740b307c025bb4ba93b58639e",
+     "verified": true
+    },
+    {
+     "name": "lyra",
+     "owner": "Lab B",
+     "account": "lyra.fleet.lab2.ssmarket-anderssonm.testnet",
+     "brain": "Qwen/Qwen3.6-35B-A3B-FP8",
+     "reason": "Inference demand is non-negotiable; idle capacity burns cash. Market clears at 105-108, so I value it at 110.",
+     "action": "bid",
+     "ok": true,
+     "near": "CcDVRLo473v4cuyazPECCQX2iGQ4Tsd4ZrBzxqLTRcYo",
+     "eth": "0x3722cce0f18c6acc1bba0c357fa0bf62d5acb1355228d72a7e68f8162eee8388",
+     "verified": true
+    },
+    {
+     "name": "kai",
+     "owner": "Lab B",
+     "account": "kai.fleet.lab2.ssmarket-anderssonm.testnet",
+     "brain": "Qwen/Qwen3.6-35B-A3B-FP8",
+     "reason": "Resale margin requires bidding below recent clears to secure profit.",
+     "action": "bid",
+     "ok": true,
+     "near": "CNW8Pm8NXGdm4euhHmFD2gUUPtAbGxmMhJrRTqfUoLLz",
+     "eth": "0xfa2f4b7ccc7c6b2a665da24b33936c9916d39b2bd1e467776066798ee015c1cd",
+     "verified": true
+    },
+    {
+     "name": "juno",
+     "owner": "Lab B",
+     "account": "juno.fleet.lab2.ssmarket-anderssonm.testnet",
+     "brain": "Qwen/Qwen3.6-35B-A3B-FP8",
+     "reason": "Bidding true market estimate of 110. Second-price strategy requires truthful valuation.",
+     "action": "bid",
+     "ok": true,
+     "near": "DkocTYJxeHaxQgW8vuctuB3CkPuiqEF4Z5tnqS7JD45D",
+     "eth": "0xa928be816d250b69ee6ac3772b2e4e07a929871988c9058e09c569ed00add2fd",
+     "verified": true
+    },
+    {
+     "name": "quill",
+     "owner": "Lab A",
+     "account": "quill.fleet.ssmarket-anderssonm.testnet",
+     "brain": "Qwen/Qwen3.6-35B-A3B-FP8",
+     "reason": "Budget capped at 50; Vickrey strategy requires bidding true value regardless of market rates.",
+     "action": "opened pool",
+     "ok": true,
+     "near": "23xpfcEZWpjoAaAZu5zmRUbC1mbVr9SAAFBAzBnqkbcx",
+     "eth": "0xef75fa54ba725710110e4ebd22e470b32c03319959a2948b3083b7e3cca5160b",
+     "verified": true
+    },
+    {
+     "name": "orion",
+     "owner": "Lab A",
+     "account": "orion.fleet.ssmarket-anderssonm.testnet",
+     "brain": "Qwen/Qwen3.6-35B-A3B-FP8",
+     "reason": "Budget caps my maximum willingness to pay, defining my true valuation.",
+     "action": "joined pool",
+     "ok": true,
+     "near": "3pdWW4qdeXxzyyWTQePDp8C7qHVnb7w5S27eWjCkA3F7",
+     "eth": "0x5b9b39dabfe6aa21bf12f66a0b6d49addf69134c5d3be4c8d4b9cab439b1516d",
+     "verified": true
+    },
+    {
+     "name": "vega",
+     "owner": "Lab B",
+     "account": "vega.fleet.lab2.ssmarket-anderssonm.testnet",
+     "brain": "Qwen/Qwen3.6-35B-A3B-FP8",
+     "reason": "Budget constraint caps true value at 45. Truthful bidding follows Vickrey strategy.",
+     "action": "joined pool",
+     "ok": true,
+     "near": "Ap1hY45cAmemzzQjBFBh9gtPbQk5SV5ipXP4zYQXRe8M",
+     "eth": "0x4535aebfd35f0dfd0a1d6fce754985c595aed144c91cba9f82790fba2fdbef8f",
+     "verified": true
+    }
+   ],
+   "blocked": {
+    "agent": "vega.fleet.lab2.ssmarket-anderssonm.testnet",
+    "attack": "eth-with-bid",
+    "attempt": "send 0.001 ETH to the auction contract",
+    "refused": true,
+    "reason": "agents cannot send ETH",
+    "near": "EMjThT4pK4hoso9ooqr3jhwbJ1ZpPRw2n6v7SA31BokF"
+   },
+   "txs": [
+    {
+     "what": "auction opened",
+     "eth": "0xeda4f35ecdedc73bd2dc21e58533340b092d6cf6f7ec94d5719e1f06f08da266"
+    },
+    {
+     "what": "pool #1 submitted by quill",
+     "account": "quill.fleet.ssmarket-anderssonm.testnet",
+     "near": "9x8gPgYwRmJnWzjU8kvpaReCqwPNhbiPSi2GzZHmondp",
+     "eth": "0x34218f6e59186ff6e563a4c5e6cbfae183ebf93f24de5025999bb2489cbfd423",
+     "ok": true
+    },
+    {
+     "what": "closed",
+     "eth": "0x7bd688c27ecccee98dc5dfa516d49bc8b60fce2cdef759436e41b8343f91f912"
+    },
+    {
+     "what": "revealed (Zama KMS proof verified on-chain)",
+     "eth": "0xc01b92a7e32f86fcb3dddf295e7a5246705f1107d8739abaeda06f43d584ce2e"
+    }
+   ],
+   "payments": [
+    {
+     "agent": "nova.fleet.ssmarket-anderssonm.testnet",
+     "units": 151,
+     "wnear": 0.0151,
+     "seller": "tessera.ssmarket-anderssonm.testnet",
+     "ok": true,
+     "near": "5Lvx3dAZ74s6YbS8Vp54gpUDyWWBRB7o6hgy2ycirGwn",
+     "error": null
+    }
+   ],
+   "ai": {
+    "model": "Qwen/Qwen3.6-35B-A3B-FP8",
+    "proofs": "proofs/auction-32.json",
+    "decisions": 8,
+    "verified": 8,
+    "signers": [
+     "0xfdbd7952498b333206f360d71d97a1e0961e8ddf",
+     "0xb98a789cdc4817275f5155593ba73ef2a957e779"
+    ]
+   },
+   "auction": 32,
+   "pool": {
+    "id": 1,
+    "members": [
+     "quill",
+     "orion",
+     "vega"
+    ],
+    "accounts": [
+     "quill.fleet.ssmarket-anderssonm.testnet",
+     "orion.fleet.ssmarket-anderssonm.testnet",
+     "vega.fleet.lab2.ssmarket-anderssonm.testnet"
+    ]
+   },
+   "winner": "nova.fleet.ssmarket-anderssonm.testnet",
+   "price": 151,
+   "bidCount": 6,
+   "intents": {
+    "dry": true,
+    "quotedAt": "2026-11-12T23:39:56.814Z",
+    "origin": "nep141:wrap.near",
+    "destination": "nep245:v2_1.omni.hot.tg:10_A2ewyUyDp6qsue1jqZsGypkCxRJ",
+    "symbol": "USDC",
+    "chain": "op",
+    "recipient": "0x5D1D7a0e2CF6dD32c66C773Ecd7324e10E7e9990",
+    "amountIn": "15100000000000000000000",
+    "amountInFormatted": "0.0151",
+    "amountInUsd": "0.051642000000",
+    "amountOut": "50741",
+    "amountOutFormatted": "0.050741",
+    "amountOutUsd": "0.050716035428",
+    "timeEstimate": 15,
+    "signature": "ed25519:3MAutza1xev2B6FpwV7YdXtHnTNLGD14KWY94JWYwFXa5p9792mvr8mdwQDW7wu2y6TEq3gPWxoAb8tFmw7exzNQ"
+   },
+   "finished": "2026-11-12T23:40:02.967Z"
+  },
+  {
+   "version": 2,
    "started": "2026-11-12T17:29:06.144Z",
    "lot": "4x A100 · 2 hours",
    "reserve": 90,
@@ -2941,21 +5311,21 @@
   }
  ],
  "stats": {
-  "rounds": 22,
-  "bids": 89,
-  "pools": 22,
-  "blocked": 22,
-  "paid": 27,
-  "aiDecisions": 6
+  "rounds": 34,
+  "bids": 146,
+  "pools": 31,
+  "blocked": 34,
+  "paid": 36,
+  "aiDecisions": 96
  },
- "updated": "2026-11-12T17:40:13.779Z",
+ "updated": "2026-11-15T01:58:00.263Z",
  "contract": "0x4994b9537D50756c5858399bDd460Ba70BE878cc",
  "vault": "fleet.ssmarket-anderssonm.testnet",
  "vaults": [
   "fleet.ssmarket-anderssonm.testnet",
   "fleet.lab2.ssmarket-anderssonm.testnet"
  ],
- "seller": "ember.ssmarket-anderssonm.testnet",
+ "seller": "kestrel.ssmarket-anderssonm.testnet",
  "sellers": [
   {
    "name": "Northwind GPU",
