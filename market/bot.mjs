@@ -416,6 +416,18 @@ async function topUpAgentsNear(s) {
         log("topped up vault", w.vault, r.failure || "0.5 NEAR");
       }
     } catch (e) { log("vault top-up failed:", w.vault, e.message); }
+    // and keep its wNEAR float for payments (a win costs up to ~0.06 wNEAR; Lab A ran dry before #58)
+    try {
+      const bal = BigInt((await nearView(WNEAR, "ft_balance_of", { account_id: w.vault })) || "0");
+      if (bal < 100n * MILLI) {
+        const FLOAT = 400n * MILLI;
+        const r = await nearSend(w.ownerId, w.ownerKeyStr, WNEAR, [
+          actionCreators.functionCall("near_deposit", Buffer.from("{}"), 10n * TGAS, FLOAT),
+          actionCreators.functionCall("ft_transfer", Buffer.from(JSON.stringify({ receiver_id: w.vault, amount: FLOAT.toString(), memo: "SealedSwarm vault float" })), 30n * TGAS, 1n),
+        ]);
+        log("refilled wNEAR float", w.vault, r.failure || "0.4 wNEAR");
+      }
+    } catch (e) { log("float refill failed:", w.vault, e.message); }
   }
   for (const w of swarms(s)) for (const a of w.agents) {
     // a 300 Tgas call needs ~0.3 NEAR of balance up front (mostly refunded): keep agents above 0.45
