@@ -160,7 +160,7 @@ function tokenTransfer(tx, token) {
 }
 
 // Proves: NEAR vault tx → MPC signature → exactly the Sepolia tx, from the agent's derived address.
-async function proveSignedAction(section, label, nearHash, sender, ethHash, vault, agentIndex) {
+async function proveSignedAction(section, label, nearHash, sender, ethHash, vault, agentIndex, auctionId) {
   await guard(section, label, async () => {
     const tx = await nearTx(nearHash, sender);
     const { method, unsigned, receiver } = requestSignArgs(tx);
@@ -173,8 +173,16 @@ async function proveSignedAction(section, label, nearHash, sender, ethHash, vaul
     const signer = await recoverTransactionAddress({ serializedTransaction: signed });
     const expected = await agentAddress(vault, agentIndex);
     const onchain = await ethReceipt(ethHash);
-    const ok = hash.toLowerCase() === ethHash.toLowerCase() && signer === expected && getAddress(parsed.to) === getAddress(AUCTION) && onchain?.status === "0x1" && getAddress(onchain.from) === expected;
-    record(section, label, ok, `NEAR ${short(nearHash)} → MPC sig → Sepolia ${short(hash)}${hash.toLowerCase() === ethHash.toLowerCase() ? "" : " ≠ " + short(ethHash)}, signer ${short(signer)} (derived ${PATH_PREFIX}${agentIndex} = ${short(expected)}), status ${onchain?.status}`);
+    // a transaction that reached Sepolia at or after the auction's end time is reverted by the
+    // contract (the deadline holds); the signature chain is still proven, so say so instead of failing
+    let late = "";
+    if (onchain?.status === "0x0" && auctionId != null) {
+      const blk = await eth("eth_getBlockByNumber", [onchain.blockNumber, false]);
+      const a = await ethCall("getAuction", [BigInt(auctionId)]);
+      if (BigInt(blk.timestamp) >= BigInt(a.endTime)) late = `; it reached Sepolia at the end time (block ${BigInt(blk.timestamp)} ≥ end ${a.endTime}), so the auction refused the late entry`;
+    }
+    const ok = hash.toLowerCase() === ethHash.toLowerCase() && signer === expected && getAddress(parsed.to) === getAddress(AUCTION) && (onchain?.status === "0x1" || !!late) && getAddress(onchain.from) === expected;
+    record(section, label, ok, `NEAR ${short(nearHash)} → MPC sig → Sepolia ${short(hash)}${hash.toLowerCase() === ethHash.toLowerCase() ? "" : " ≠ " + short(ethHash)}, signer ${short(signer)} (derived ${PATH_PREFIX}${agentIndex} = ${short(expected)}), status ${onchain?.status}${late}`);
   });
 }
 
@@ -317,13 +325,13 @@ async function main() {
     for (const ag of round.agents) {
       if (!ag.ok || !ag.near || !ag.eth) continue;
       signed++;
-      await proveSignedAction(sec, `${ag.name} "${ag.action}" was signed by the NEAR MPC through its vault`, ag.near, ag.account, ag.eth, vaultOf(ag.account), await indexIn(ag.account));
+      await proveSignedAction(sec, `${ag.name} "${ag.action}" was signed by the NEAR MPC through its vault`, ag.near, ag.account, ag.eth, vaultOf(ag.account), await indexIn(ag.account), round.auction);
     }
     for (const t of round.txs) {
       if (!t.near || !t.eth) continue;
       const acct = t.account ?? acctOf(round, t.what.split(" by ")[1]);
       signed++;
-      await proveSignedAction(sec, `${t.what} was signed by the NEAR MPC through its vault`, t.near, acct, t.eth, vaultOf(acct), await indexIn(acct));
+      await proveSignedAction(sec, `${t.what} was signed by the NEAR MPC through its vault`, t.near, acct, t.eth, vaultOf(acct), await indexIn(acct), round.auction);
     }
     if (round.blocked?.near) {
       refusals++;
