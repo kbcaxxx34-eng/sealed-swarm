@@ -130,6 +130,11 @@ const nearView = async (account, method, args = {}) => {
   const r = await nearRpc.query({ request_type: "call_function", finality: "final", account_id: account, method_name: method, args_base64: Buffer.from(JSON.stringify(args)).toString("base64") });
   return JSON.parse(Buffer.from(r.result).toString() || "null");
 };
+// an agent's remaining spending limit in its vault, in auction units (get_budget takes one raw byte)
+async function agentBudgetUnits(vault, index) {
+  const r = await nearRpc.query({ request_type: "call_function", finality: "final", account_id: vault, method_name: "get_budget", args_base64: Buffer.from([index]).toString("base64") });
+  return BigInt(JSON.parse(Buffer.from(r.result).toString() || "\"0\"")) / UNIT;
+}
 const accountExists = async (id) => { try { await nearRpc.query({ request_type: "view_account", finality: "final", account_id: id }); return true; } catch { return false; } };
 async function nearBalance(id) { try { return BigInt((await nearRpc.query({ request_type: "view_account", finality: "final", account_id: id })).amount); } catch { return 0n; } }
 
@@ -428,6 +433,16 @@ async function topUpAgentsNear(s) {
         log("refilled wNEAR float", w.vault, r.failure || "0.4 wNEAR");
       }
     } catch (e) { log("float refill failed:", w.vault, e.message); }
+    // each agent's spending limit in the vault: the owner renews it to 0.5 wNEAR when it falls
+    // under 0.1 wNEAR (Lab A's nova won #73 and #76 with its limit spent, and the vault refused to pay)
+    try {
+      const renew = [];
+      for (let i = 0; i < w.agents.length; i++) if ((await agentBudgetUnits(w.vault, i)) < 1000n) renew.push(i);
+      if (renew.length) {
+        const r = await nearSend(w.ownerId, w.ownerKeyStr, w.vault, renew.map((i) => actionCreators.functionCall("set_budget", new Uint8Array([i, ...u128le(5000n * UNIT)]), 30n * TGAS, 0n)));
+        log("renewed spending limits", w.vault, renew.map((i) => w.agents[i].name).join(","), r.failure || "0.5 wNEAR each");
+      }
+    } catch (e) { log("budget renewal failed:", w.vault, e.message); }
   }
   for (const w of swarms(s)) for (const a of w.agents) {
     // a 300 Tgas call needs ~0.3 NEAR of balance up front (mostly refunded): keep agents above 0.45
@@ -502,7 +517,10 @@ async function round() {
     let d = null;
     if (atts.length) { try { d = await nearAiDecide(a, lot, history, budget, atts); } catch (e) { log(`NEAR AI failed for ${a.name}:`, e.message); } }
     d ??= rulesDecide(a, lot, history, seed);
-    return { a, ...d, budget, amount: Math.min(d.v, budget) };
+    // never bid more than the vault would let this agent pay
+    let onchain = budget;
+    try { onchain = Number(await agentBudgetUnits(a.vault, a.index - 1)); } catch {}
+    return { a, ...d, budget, amount: Math.max(1, Math.min(d.v, budget, onchain)) };
   }));
   const solo = decisions.filter((d) => d.amount >= lot.reserve);
   let pool = decisions.filter((d) => d.amount < lot.reserve);
